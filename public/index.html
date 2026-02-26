@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Мафія 🎭</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+:root{
+  --bg:#080810;--surface:#10101c;--card:#16162a;--card2:#1e1e35;
+  --border:rgba(255,255,255,0.08);
+  --red:#e53e3e;--red2:#ff6b6b;--gold:#d69e2e;--gold2:#f6c255;
+  --blue:#4299e1;--green:#38a169;--green2:#68d391;--purple:#805ad5;
+  --text:#e8e8ff;--text2:#8888aa;--text3:#555580;
+  --spring:cubic-bezier(0.34,1.56,0.64,1);--smooth:cubic-bezier(0.4,0,0.2,1);
+  --sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px);
+}
+html,body{height:100%;height:100dvh;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body{
+  overscroll-behavior:none;
+  touch-action:pan-y;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:-120px;          /* запас, щоб кульки не різались */
+  pointer-events:none;
+  z-index:0;
+
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(80,30,160,.6) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 55% at 85% 90%, rgba(30,60,160,.22) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 60% at 15% 75%, rgba(100,15,70,.22) 0%, transparent 60%);
+}
+input,textarea{user-select:text;-webkit-user-select:text}
+button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+
+/* ═══ SCREENS ═══════════════════════════════════ */
+.screen{
+  position:fixed;
+  inset:0;
+
+  /* ✅ safe-area + нормальні відступи */
+  box-sizing:border-box;
+  padding:calc(24px + var(--st)) 18px calc(24px + var(--sb));
+
+  display:flex;
+  flex-direction:column;
+
+  opacity:0;
+  transform:translateY(24px) scale(.98);
+  pointer-events:none;
+
+  transition:opacity .55s var(--smooth),transform .55s var(--smooth);
+  will-change:opacity,transform;
+  z-index:1;
+}
+.screen.active{opacity:1;transform:none;pointer-events:all}
+
+/* ═══ HOME ══════════════════════════════════════ */
+#sc-home{
+  position:relative;
+  background:transparent;
+
+  align-items:center;
+  justify-content:flex-start;   /* ← змінити */
+
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+
+  padding:calc(24px + var(--st)) 24px calc(32px + var(--sb));
+}
+
+#sc-home>*{position:relative;z-index:1}
+.home-logo{text-align:center;margin-bottom:20px}
+.logo-wrap{position:relative;display:inline-block}
+.logo-emoji{font-size:82px;display:block;animation:floatLogo 4s ease-in-out infinite;filter:drop-shadow(0 0 28px rgba(140,70,255,.75))}
+.logo-ring{position:absolute;inset:-16px;border-radius:50%;background:radial-gradient(circle,rgba(120,80,220,.28) 0%,transparent 70%);animation:ringPulse 4s ease-in-out infinite;pointer-events:none}
+@keyframes ringPulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.18);opacity:1}}
+.home-logo h1{font-family:'Cinzel',serif;font-size:36px;font-weight:900;letter-spacing:10px;text-transform:uppercase;margin-top:10px;
+  background:linear-gradient(160deg,#f0e8ff 0%,#c8a0ff 45%,#7848d0 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.home-logo p{color:var(--text3);font-size:12px;margin-top:5px;letter-spacing:2.5px;text-transform:uppercase}
+@keyframes floatLogo{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-11px) rotate(1.5deg)}}
+.home-roles{display:flex;justify-content:center;gap:18px;margin-bottom:22px}
+.hrp{display:flex;flex-direction:column;align-items:center;gap:5px}
+.hrp-ic{font-size:26px;line-height:1}
+.hrp-lb{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.tg-preview{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:10px 14px;margin-bottom:6px;width:100%;max-width:360px}
+.tg-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+.tg-av img{width:100%;height:100%;object-fit:cover}
+.tg-info{flex:1;min-width:0}.tg-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px}.tg-sub{font-size:11px;color:var(--text3)}
+.tg-check{color:#4fc3f7;font-size:12px;line-height:1}
+.edit-btn{font-size:11px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:8px;padding:4px 9px;flex-shrink:0}
+.home-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.ig{display:flex;flex-direction:column;gap:6px}
+.il{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2)}
+.ifield{background:var(--card2);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;font-size:16px;font-family:'DM Sans',sans-serif;color:var(--text);width:100%;transition:border-color .2s;-webkit-appearance:none}
+.ifield:focus{outline:none;border-color:var(--purple)}.ifield::placeholder{color:var(--text3)}
+.divider{display:flex;align-items:center;gap:12px;color:var(--text3);font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.join-row{display:flex;gap:10px}.join-row .ifield{flex:1;letter-spacing:3px;font-size:18px;font-family:'Cinzel',serif}
+
+/* ═══ BUTTONS ══════════════════════════════════ */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;transition:transform .15s var(--spring),opacity .15s;width:100%}
+.btn:active{transform:scale(.96);opacity:.8}
+.btn-primary{background:linear-gradient(135deg,var(--purple),#6b46c1);color:#fff;box-shadow:0 4px 20px rgba(128,90,213,.4)}
+.btn-danger{background:linear-gradient(135deg,var(--red),#c53030);color:#fff;box-shadow:0 4px 20px rgba(229,62,62,.4)}
+.btn-ghost{background:var(--card2);border:1.5px solid var(--border);color:var(--text2)}
+.btn-sm{padding:10px 16px;font-size:13px;border-radius:10px}
+
+/* ═══ LOBBY ════════════════════════════════════ */
+#sc-lobby{background:var(--bg);overflow:hidden}
+.lobby-header{padding:20px 20px 0;display:flex;flex-direction:column;gap:14px}
+.lobby-code-block{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;text-align:center;cursor:pointer;transition:background .2s,transform .15s var(--spring);position:relative}
+.lobby-code-block:active{transform:scale(.98);background:var(--card2)}
+.lobby-code-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.lobby-code{font-family:'Cinzel',serif;font-size:42px;font-weight:700;letter-spacing:10px;color:var(--gold2);text-shadow:0 0 30px rgba(246,194,85,.4)}
+.lobby-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.copy-hint{font-size:11px;color:var(--purple);margin-top:4px;opacity:.7}
+.lobby-ph{display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.lobby-ph span{font-size:13px;color:var(--text2);font-weight:500}
+.lobby-players{flex:1;overflow-y:auto;padding:8px 20px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+.player-row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:10px 14px;border:1px solid var(--border);animation:slideInRow .45s var(--spring)}
+@keyframes slideInRow{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.pav{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--purple),var(--blue))}
+.pav img{width:100%;height:100%;object-fit:cover}
+.pn{font-weight:600;font-size:15px;display:flex;align-items:center;gap:4px;flex:1;min-width:0;flex-wrap:wrap}
+.pbadge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:rgba(214,158,46,.15);color:var(--gold2);letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0}
+.pdot.off{background:var(--text3);box-shadow:none}
+.lobby-actions{padding:14px 20px calc(14px + var(--sb));display:flex;flex-direction:column;gap:10px}
+
+/* Share menu */
+.share-menu{position:fixed;inset:0;z-index:400;display:none;align-items:flex-end;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.share-menu.show{display:flex}
+.share-panel{background:var(--surface);border-radius:28px 28px 0 0;padding:20px 20px calc(20px + var(--sb));width:100%;animation:shareUp .5s var(--spring)}
+@keyframes shareUp{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+.share-title{font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--text2);text-align:center;margin-bottom:16px}
+.share-btn{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;transition:background .2s,transform .15s var(--spring);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:var(--text);width:100%}
+.share-btn:active{transform:scale(.97);background:var(--card2)}
+.share-icon{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px}
+
+/* ═══ GAME TOPBAR ══════════════════════════════ */
+#sc-game{background:var(--bg);overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px;border-bottom:1px solid var(--border);background:rgba(8,8,16,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);position:relative;z-index:10;flex-shrink:0;gap:8px}
+.topbar-left{display:flex;flex-direction:column;min-width:0}
+.t-phase{font-family:'Cinzel',serif;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text2)}
+.t-night{font-size:11px;color:var(--text3)}
+.t-timer{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--text);min-width:42px;text-align:center;flex-shrink:0}
+.t-timer.urgent{color:var(--red2);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.role-pill{display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;cursor:pointer;flex-shrink:0;transition:background .2s,transform .15s var(--spring)}
+.role-pill:active{transform:scale(.94);background:rgba(255,255,255,.1)}
+.role-pill.on{display:flex}.role-pill.dead{opacity:.6}
+.rp-ic{font-size:18px}.rp-lbl{font-size:11px;color:var(--text3);line-height:1.2}.rp-hint{font-size:9px;color:var(--text3)}
+
+/* ═══ CINEMATIC OVERLAY ════════════════════════ */
+.cinema{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:background 1.2s ease}
+.cinema.show{pointer-events:all;opacity:1}
+.cinema-content{text-align:center;padding:24px;transition:opacity .45s ease,transform .45s var(--smooth)}
+.cinema-content.out{opacity:0;transform:translateY(-14px) scale(.97)}
+.cinema-content.in{opacity:1;transform:none}
+.cin-icon{font-size:80px;display:block;margin-bottom:16px;animation:cinFloat 2.5s ease-in-out infinite;filter:drop-shadow(0 0 20px currentColor)}
+@keyframes cinFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.04)}}
+.cin-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:3px;color:var(--text);line-height:1.3}
+.cin-sub{font-size:14px;color:var(--text2);margin-top:8px;font-style:italic}
+.cin-progress{display:flex;gap:6px;margin-top:28px;justify-content:center}
+.cin-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .3s}
+.cin-dot.active{background:rgba(255,255,255,.8)}
+/* Parallax stars for cinematic */
+.cin-stars{position:absolute;inset:0;z-index:-1;pointer-events:none}
+
+/* ═══ NIGHT ════════════════════════════════════ */
+.phase-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.night-bg{flex:1;background:radial-gradient(ellipse at 50% -10%,#1a0a35 0%,#050510 60%);display:flex;flex-direction:column;align-items:center;overflow:hidden;position:relative}
+.stars-canvas{position:absolute;inset:0;z-index:0}
+.night-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;flex:1}
+.night-role-label{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:3px;margin:14px 0 2px}
+.night-sub{font-size:12px;color:var(--text3);margin-bottom:12px}
+.night-actions{width:100%;flex:1;display:flex;flex-direction:column;padding:0 14px 8px;gap:7px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.apc{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;transition:all .2s var(--spring);animation:su .3s var(--spring) both}
+.apc:nth-child(1){animation-delay:.04s}.apc:nth-child(2){animation-delay:.08s}.apc:nth-child(3){animation-delay:.12s}.apc:nth-child(4){animation-delay:.16s}.apc:nth-child(5){animation-delay:.2s}
+@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.apc:active{transform:scale(.97)}
+.apc.sm{border-color:var(--red);background:rgba(229,62,62,.12);box-shadow:0 0 20px rgba(229,62,62,.2)}
+.apc.ss{border-color:var(--gold);background:rgba(214,158,46,.12)}
+.apc.sd{border-color:var(--green);background:rgba(56,161,105,.12)}
+.apc-av{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--purple),#2d3748)}
+.apc-av img{width:100%;height:100%;object-fit:cover}
+.apc-name{font-weight:600;font-size:15px;flex:1;display:flex;align-items:center;gap:4px}
+.apc-chk{font-size:18px}
+.night-sleep{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;color:var(--text3);text-align:center}
+.zzz{font-size:48px;animation:zzz 2s ease-in-out infinite}
+@keyframes zzz{0%,100%{transform:translateY(0) rotate(-5deg);opacity:.7}50%{transform:translateY(-8px) rotate(5deg);opacity:1}}
+
+/* ═══ DAWN / DAY ═══════════════════════════════ */
+.day-view{flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#08080e,#0c0c1a);overflow:hidden}
+.day-strip{display:flex;gap:8px;padding:8px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
+.dpc{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+.dpc .dav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:2px solid transparent;overflow:hidden;transition:all .2s}
+.dpc .dav img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.dpc.dead .dav{background:#222;opacity:.4;filter:grayscale(1)}
+.dpc .dn{font-size:10px;color:var(--text3);max-width:46px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-area{flex:1;overflow-y:auto;padding:6px 14px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+.chat-msg{display:flex;flex-direction:column;max-width:80%;animation:msgIn .32s var(--spring)}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.chat-msg.mine{align-self:flex-end;align-items:flex-end}.chat-msg.theirs{align-self:flex-start}
+.chat-name{font-size:11px;color:var(--text3);margin-bottom:2px;padding:0 4px;display:flex;align-items:center;gap:3px}
+.chat-bubble{padding:9px 14px;border-radius:18px;font-size:14px;line-height:1.45;color:var(--text);max-width:100%;word-break:break-word}
+.chat-msg.mine .chat-bubble{background:linear-gradient(135deg,#4a27c0,var(--purple));border-bottom-right-radius:6px}
+.chat-msg.theirs .chat-bubble{background:var(--card2);border-bottom-left-radius:6px}
+.chat-time{font-size:10px;color:var(--text3);padding:0 4px;margin-top:2px}
+.chat-sys{text-align:center;font-size:12px;color:var(--text3);padding:4px 0;font-style:italic}
+.chat-bar{display:flex;gap:10px;padding:8px 14px calc(8px + var(--sb));border-top:1px solid var(--border);background:rgba(8,8,16,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-shrink:0}
+.chat-in{flex:1;background:var(--card2);border:1.5px solid var(--border);border-radius:24px;padding:10px 16px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);-webkit-appearance:none;resize:none;max-height:100px;outline:none;transition:border-color .2s}
+.chat-in:focus{border-color:var(--purple)}.chat-in::placeholder{color:var(--text3)}
+.send-btn{width:44px;height:44px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s var(--spring);align-self:flex-end}
+.send-btn:active{transform:scale(.88)}
+
+/* ═══ VOTING ═══════════════════════════════════ */
+.vote-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);border-radius:28px 28px 0 0;padding:14px 14px calc(14px + var(--sb));z-index:50;transform:translateY(100%);transition:transform .55s var(--spring);max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.vote-sheet.open{transform:none}
+.sh{width:40px;height:4px;background:var(--text3);border-radius:2px;margin:0 auto 14px}
+.v-title{font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--text2);text-align:center;margin-bottom:3px}
+.v-sub{font-size:12px;color:var(--text3);text-align:center;margin-bottom:14px}
+.v-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.vc{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:11px 14px;transition:all .2s var(--spring)}
+.vc:active{transform:scale(.97)}
+.vc.von{border-color:var(--red);background:rgba(229,62,62,.1);box-shadow:0 0 16px rgba(229,62,62,.15)}
+.vc.myv{border-color:var(--gold);background:rgba(214,158,46,.1)}
+.v-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden}
+.v-av img{width:100%;height:100%;object-fit:cover}
+.v-name{font-weight:600;font-size:15px;flex:1;display:flex;align-items:center;gap:4px}
+.v-cnt{background:rgba(255,255,255,.08);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;color:var(--text2);min-width:26px;text-align:center}
+.v-cnt.hv{background:rgba(229,62,62,.2);color:var(--red2)}
+
+/* ═══ GAME OVER ════════════════════════════════ */
+.go-view{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.win-banner{text-align:center;margin-bottom:24px;animation:bannerIn .6s var(--spring)}
+@keyframes bannerIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
+.win-emoji{font-size:72px;display:block;margin-bottom:10px}
+.win-title{font-family:'Cinzel',serif;font-size:24px;font-weight:900;letter-spacing:4px}
+.win-sub{font-size:14px;color:var(--text2);margin-top:6px}
+.reveal-list{display:flex;flex-direction:column;gap:8px;width:100%;max-width:360px;margin-bottom:24px}
+.rc{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:11px 14px;border:1px solid var(--border);animation:rcIn .4s var(--spring) both}
+.rc:nth-child(1){animation-delay:.1s}.rc:nth-child(2){animation-delay:.2s}.rc:nth-child(3){animation-delay:.3s}.rc:nth-child(4){animation-delay:.4s}.rc:nth-child(5){animation-delay:.5s}.rc:nth-child(6){animation-delay:.6s}
+@keyframes rcIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.r-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;overflow:hidden}
+.r-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.r-name{flex:1;font-weight:600;display:flex;align-items:center;gap:4px}
+.r-name.dead{text-decoration:line-through;color:var(--text3)}
+.r-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:1px;text-transform:uppercase}
+
+/* ═══ ROLE PANEL ═══════════════════════════════ */
+.role-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
+.role-ov.open{opacity:1;pointer-events:all}
+.role-panel{
+  position:fixed;
+  top:calc(var(--st) + 10px);
+  left:10px;
+  right:10px;
+  z-index:201;
+  background:var(--surface);
+
+  /* щоб зверху не було "урізано" і виглядало як sheet */
+  border-radius:24px;
+
+  /* safe-area вже врахували через top, тому тут без var(--st) */
+  padding:16px 24px 32px;
+
+  transform:translateY(calc(-110% - var(--st)));
+  transition:transform .6s var(--spring);
+
+  max-height:88vh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+
+  border:1px solid rgba(255,255,255,.06);
+}
+.role-panel.open{ transform:none; }
+.role-close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:var(--card2);
+  color:var(--text2);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  transition:transform .15s var(--spring)
+}
+.role-close:active{transform:scale(.9)}
+.role-display{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;margin-top:8px}
+.role-emblem{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;border:3px solid;animation:ePulse 3s ease-in-out infinite}
+@keyframes ePulse{0%,100%{box-shadow:0 0 20px currentColor}50%{box-shadow:0 0 50px currentColor}}
+.role-rname{font-family:'Cinzel',serif;font-size:26px;font-weight:900;letter-spacing:4px}
+.role-desc{font-size:14px;color:var(--text2);line-height:1.6;max-width:280px}
+.role-dead{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:14px;padding:12px 20px;font-size:14px;color:var(--text3)}
+.mafia-team{width:100%;background:rgba(229,62,62,.1);border:1px solid rgba(229,62,62,.3);border-radius:14px;padding:14px}
+.mt-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--red2);margin-bottom:10px}
+.mt-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.05)}
+.mt-row:first-of-type{border-top:none}
+.slog{width:100%;background:rgba(214,158,46,.08);border:1px solid rgba(214,158,46,.2);border-radius:14px;padding:14px;max-height:150px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sl-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:8px}
+.sl-row{font-size:13px;padding:5px 0;border-top:1px solid rgba(255,255,255,.05);color:var(--text2)}
+.sl-row:first-of-type{border-top:none}
+.mtag{color:var(--red2);font-weight:700}.ctag{color:var(--green2);font-weight:700}
+
+/* ═══ DEAD OVERLAY ═════════════════════════════ */
+.dead-ov{position:fixed;bottom:0;left:0;right:0;z-index:80;background:linear-gradient(to top,rgba(8,8,16,.98),rgba(8,8,16,.7));padding:24px 20px calc(24px + var(--sb));display:none;flex-direction:column;align-items:center;gap:14px;border-top:1px solid var(--border);animation:suO .4s var(--spring)}
+.dead-ov.show{display:flex}
+@keyframes suO{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.dead-btns{display:flex;gap:10px;width:100%;max-width:320px}
+
+/* ═══ BANNERS / TOASTS ═════════════════════════ */
+.recon{position:fixed;top:0;left:0;right:0;background:rgba(229,62,62,.15);border-bottom:1px solid rgba(229,62,62,.3);padding:8px 16px;display:none;align-items:center;justify-content:center;gap:8px;z-index:500;font-size:13px;color:var(--red2)}
+.recon.on{display:flex}
+.rspin{width:14px;height:14px;border:2px solid rgba(255,100,100,.3);border-top-color:var(--red2);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+#sc-connect{align-items:center;justify-content:center;gap:16px}
+.cspin{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+.toast-wrap{position:fixed;top:calc(var(--st) + 56px);left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--card2);border:1px solid var(--border);border-radius:24px;padding:9px 18px;font-size:13px;color:var(--text);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:tIn .3s var(--spring)}
+@keyframes tIn{from{opacity:0;transform:translateY(-10px) scale(.9)}to{opacity:1;transform:none}}
+.toast.err{border-color:rgba(229,62,62,.5);color:var(--red2)}.toast.ok{border-color:rgba(56,161,105,.5);color:var(--green2)}
+.dev-mark{
+  margin-top:auto;                 /* ← головне */
+  text-align:center;
+  padding-top:24px;
+
+  font-size:11px;
+  letter-spacing:1.8px;
+  text-transform:uppercase;
+
+  color:rgba(232,232,255,.28);
+  cursor:pointer;
+
+  transition:opacity .2s ease, transform .15s var(--spring);
+}
+
+.dev-mark:active{
+  transform:scale(.95);
+  opacity:.6;
+}
+</style>
+</head>
+<body>
+
+<div class="recon" id="recon"><div class="rspin"></div>Перепідключення…</div>
+
+<div id="sc-connect" class="screen active"><div class="cspin"></div><p style="color:var(--text2);font-size:14px">Підключення…</p></div>
+
+<div id="sc-home" class="screen">
+  <div class="home-logo">
+    <div class="logo-wrap"><span class="logo-emoji">🎭</span><div class="logo-ring"></div></div>
+    <h1>Мафія</h1>
+    <p>Multiplayer · 4–20 гравців</p>
+  </div>
+  <div class="home-roles">
+    <div class="hrp"><span class="hrp-ic">🔫</span><span class="hrp-lb" style="color:#e53e3e">Мафія</span></div>
+    <div class="hrp"><span class="hrp-ic">⭐</span><span class="hrp-lb" style="color:#d69e2e">Шериф</span></div>
+    <div class="hrp"><span class="hrp-ic">💊</span><span class="hrp-lb" style="color:#38a169">Лікар</span></div>
+    <div class="hrp"><span class="hrp-ic">🏘️</span><span class="hrp-lb" style="color:#4299e1">Мирний</span></div>
+  </div>
+  <div id="tgPrev" style="display:none"></div>
+  <div class="home-card">
+    <div class="ig" id="nameGroup">
+      <span class="il">Ваше ім'я</span>
+      <input type="text" class="ifield" id="nameIn" placeholder="Введіть ім'я…" maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <button class="btn btn-primary" id="createBtn">✦ Створити кімнату</button>
+    <div class="divider">або приєднатись</div>
+    <div class="join-row">
+      <input type="text" class="ifield" id="codeIn" placeholder="12345" maxlength="5" inputmode="numeric" pattern="\d*" autocomplete="off">
+      <button class="btn btn-ghost" id="joinBtn" style="width:auto;padding:15px 20px">Увійти</button>
+    </div>
+  </div>
+  <div class="dev-mark" onclick="openDev()">Development of Demoused</div>
+</div>
+
+<div id="sc-lobby" class="screen">
+  <div class="lobby-header">
+    <div class="lobby-code-block" id="codeBlock">
+      <div class="lobby-code-label">Код кімнати</div>
+      <div class="lobby-code" id="lobbyCode">–––––</div>
+      <div class="copy-hint">👆 Натисни щоб запросити</div>
+    </div>
+    <div class="lobby-ph">
+      <span>Гравці <span id="lobbyCount">0</span>/20</span>
+      <span id="minHint" style="font-size:12px;color:var(--red2)">мін. 4</span>
+    </div>
+  </div>
+  <div class="lobby-players" id="lobbyPlayers"></div>
+  <div class="lobby-actions">
+    <button class="btn btn-danger" id="startBtn" style="display:none">🎭 Почати гру</button>
+    <button class="btn btn-ghost" id="leaveBtn">← Вийти</button>
+  </div>
+</div>
+
+<div id="sc-game" class="screen">
+  <div class="topbar">
+    <div class="topbar-left"><div class="t-phase" id="tPhase">Гра</div><div class="t-night" id="tNight"></div></div>
+    <div class="t-timer" id="tTimer">–</div>
+    <div class="role-pill" id="rolePill" onclick="openRole()">
+      <div class="rp-ic" id="rpIc">🎭</div>
+      <div><div class="rp-lbl" id="rpLbl">Моя роль</div><div class="rp-hint">натисни</div></div>
+    </div>
+  </div>
+  <div id="phaseC" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
+
+  <div class="vote-sheet" id="voteSheet">
+    <div class="sh"></div>
+    <div class="v-title">ГОЛОСУВАННЯ</div>
+    <div class="v-sub" id="vSub">Оберіть підозрюваного або пропустіть</div>
+    <div class="v-list" id="vList"></div>
+    <button class="btn btn-ghost btn-sm" id="skipVote">Пропустити</button>
+  </div>
+
+  <div class="dead-ov" id="deadOv">
+    <div style="font-size:22px">💀 Ти загинув</div>
+    <div style="font-size:13px;color:var(--text3);text-align:center">Спостерігай мовчки або вийди з гри</div>
+    <div class="dead-btns">
+      <button class="btn btn-ghost" style="flex:1" onclick="observe()">👻 Спостерігати</button>
+      <button class="btn btn-danger" style="flex:1" onclick="backHome()">← Вийти</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cinematic overlay -->
+<div class="cinema" id="cinema">
+  <canvas class="cin-stars" id="cinStars"></canvas>
+  <div class="cinema-content in" id="cinContent">
+    <span class="cin-icon" id="cinIcon">🌙</span>
+    <div class="cin-title" id="cinTitle">Настає ніч...</div>
+    <div class="cin-sub" id="cinSub"></div>
+  </div>
+  <div class="cin-progress" id="cinProg"></div>
+</div>
+
+<!-- Share menu -->
+<div class="share-menu" id="shareMenu" onclick="closeShare(event)">
+  <div class="share-panel" id="sharePanel">
+    <div class="share-title">ЗАПРОСИТИ ГРАВЦІВ</div>
+    <button class="share-btn" id="shareCopyBtn">
+      <div class="share-icon" style="background:rgba(128,90,213,.2)">📋</div>
+      <div style="text-align:left">
+        <div>Скопіювати код</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:400">Код кімнати в буфер обміну</div>
+      </div>
+    </button>
+    <button class="share-btn" id="shareTgBtn" style="display:none">
+      <div class="share-icon" style="background:rgba(66,153,225,.2)">✈️</div>
+      <div style="text-align:left">
+        <div>Запросити через Telegram</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:400">Поділитись посиланням на бота</div>
+      </div>
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="closeShare()" style="margin-top:4px">Закрити</button>
+  </div>
+</div>
+
+<!-- Role overlay + panel -->
+<div class="role-ov" id="roleOv" onclick="closeRole()"></div>
+<div class="role-panel" id="rolePanel">
+  <button class="role-close" onclick="closeRole()">✕</button>
+  <div class="role-display" id="roleContent"></div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ── TELEGRAM ──────────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const TGU = tg?.initDataUnsafe?.user || null;
+
+// ── STATE ─────────────────────────────────────
+const S = {
+  ws:null, myId:null, myRole:null, myAlive:true,
+  code:null, isHost:false, phase:null, snap:null,
+  mafiaTeam:[], sheriffLog:[], nightActed:false,
+  name:'', avatarUrl:'', tgVerified:false,
+  nightTarget:null, myVote:undefined,
+  wsReady:false, reconnecting:false, deadDismissed:false,
+  botUsername:'',
+};
+const SK='mf_s';
+const saveS=()=>{try{sessionStorage.setItem(SK,JSON.stringify({myId:S.myId,code:S.code,name:S.name,avatarUrl:S.avatarUrl,tgVerified:S.tgVerified}));}catch{}};
+const loadS=()=>{try{return JSON.parse(sessionStorage.getItem(SK)||'null');}catch{return null;}};
+const clearS=()=>sessionStorage.removeItem(SK);
+
+const ROLES={
+  mafia:   {emoji:'🔫',name:'Мафія',  color:'#e53e3e',desc:'Кожну ніч обирайте жертву. Перемогли коли мафія ≥ мирних.'},
+  sheriff: {emoji:'⭐',name:'Шериф',  color:'#d69e2e',desc:'Кожну ніч перевіряйте одного — мафія чи мирний?'},
+  doctor:  {emoji:'💊',name:'Лікар',  color:'#38a169',desc:'Кожну ніч рятуйте одного гравця. Можна себе!'},
+  civilian:{emoji:'🏘️',name:'Мирний',color:'#4299e1',desc:'Знайдіть мафію обговоренням та голосуванням.'},
+};
+const RC={mafia:'#e53e3e',sheriff:'#d69e2e',doctor:'#38a169',civilian:'#4299e1'};
+
+// ── TG USER ───────────────────────────────────
+function initTG(){
+  if(!TGU)return;
+  const name=[TGU.first_name,TGU.last_name].filter(Boolean).join(' ').trim();
+  S.name=name;S.avatarUrl=TGU.photo_url||'';S.tgVerified=!!TGU.is_premium;
+  document.getElementById('nameIn').value=name;
+  const clrs=['#805ad5','#3182ce','#2f855a','#c05621','#b7791f','#97266d'];
+  const c=clrs[(TGU.id||0)%clrs.length];
+  const init=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const prev=document.getElementById('tgPrev');
+  prev.className='tg-preview';
+  prev.innerHTML=`<div class="tg-av" style="background:${c}">${S.avatarUrl?`<img src="${esc(S.avatarUrl)}" onerror="this.remove()">`:''}${!S.avatarUrl?init:''}</div>
+    <div class="tg-info"><div class="tg-name">${esc(name)}${S.tgVerified?'<span class="tg-check">✓</span>':''}</div><div class="tg-sub">Telegram акаунт</div></div>
+    <button class="edit-btn" onclick="editName()">Змінити</button>`;
+  prev.style.display='flex';
+  document.getElementById('nameGroup').style.display='none';
+}
+function editName(){document.getElementById('nameGroup').style.display='flex';document.getElementById('tgPrev').style.display='none';document.getElementById('nameIn').focus();}
+
+// ── WEBSOCKET ─────────────────────────────────
+function connectWS(){
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  S.ws=new WebSocket(`${proto}//${location.host}`);
+  S.ws.onopen=()=>{
+    S.wsReady=true;hideBanner();
+    const sess=loadS();
+    if(sess&&S.reconnecting){
+      Object.assign(S,{name:sess.name,code:sess.code,avatarUrl:sess.avatarUrl||'',tgVerified:sess.tgVerified||false});
+      wsSend({type:'join_room',name:sess.name,code:sess.code,avatarUrl:sess.avatarUrl,tgVerified:sess.tgVerified});
+      S.reconnecting=false;return;
+    }
+    if(!S.myId){showScreen('sc-home');initTG();}
+  };
+  S.ws.onclose=()=>{S.wsReady=false;S.reconnecting=true;showBanner();setTimeout(connectWS,2000);};
+  S.ws.onerror=()=>S.ws.close();
+  S.ws.onmessage=e=>{try{onMsg(JSON.parse(e.data));}catch{}};
+}
+function wsSend(o){if(S.ws?.readyState===1)S.ws.send(JSON.stringify(o));}
+const showBanner=()=>document.getElementById('recon').classList.add('on');
+const hideBanner=()=>document.getElementById('recon').classList.remove('on');
+setInterval(()=>wsSend({type:'ping'}),20000);
+
+// ── MSG HANDLER ───────────────────────────────
+function onMsg(m){
+  switch(m.type){
+    case 'joined':
+      S.myId=m.id;S.code=m.code;S.isHost=m.isHost;
+      if(m.botUsername)S.botUsername=m.botUsername;
+      document.getElementById('lobbyCode').textContent=m.code;
+      saveS();
+      if(!m.reconnecting){showScreen('sc-lobby');}
+      // else: wait for snapshot to decide correct screen
+      break;
+
+    case 'promoted_host':
+      S.isHost=true;toast('👑 Ти тепер хост!','ok');
+      // Refresh game-over screen so host sees restart button
+      if((S.phase==='game_over'||S.phase==='finished')&&S.lastGameOver){
+        const w=S.lastGameOver.winner==='civilians'?S.myRole!=='mafia':S.myRole==='mafia';
+        showGameOver(S.lastGameOver,w);}
+      break;
+    case 'room_restarted':onRoomRestarted();break;
+
+    case 'left_room':
+      clearS();S.myId=null;S.code=null;
+      S.phase=null;
+      resetUI();showScreen('sc-home');break;
+
+    case 'kicked':clearS();S.myId=null;S.code=null;toast('Тебе виключили 😔');resetUI();showScreen('sc-home');break;
+    case 'error':toast(m.msg,'err');if(!S.myId)showScreen('sc-home');break;
+    case 'player_joined':toast(`${m.name} приєднався! 👋`,'ok');vib(10);break;
+    case 'player_disconnected':toast(`${m.name} відключився`);break;
+    case 'player_reconnected':toast(`${m.name} повернувся! 👋`,'ok');break;
+
+    case 'your_role':
+      S.myRole=m.role;S.nightActed=false;updatePill(false);buildRoleCard();break;
+
+    case 'mafia_team':
+      S.mafiaTeam=m.team.filter(t=>t.id!==S.myId);buildRoleCard();break;
+
+    case 'game_starting':
+      S.phase='starting';S.mafiaTeam=[];S.sheriffLog=[];S.deadDismissed=false;
+      toast('🎭 Гра починається!','ok');vib([100,50,100]);
+      document.getElementById('rolePill').classList.add('on');
+      document.getElementById('deadOv').classList.remove('show');
+      showScreen('sc-game');break;
+
+    case 'phase':onPhase(m);break;
+    case 'tick':updTimer(m.time);break;
+    case 'chat':appendMsg(m.message);break;
+    case 'vote_update':if(S.phase==='voting')renderVotes(m.votes);break;
+    case 'eliminated':toast(m.message);vib([200,100,200]);break;
+    case 'no_elimination':toast(m.message);break;
+
+    case 'sheriff_result':
+      S.sheriffLog.unshift({name:m.name,isMafia:m.isMafia,night:S.snap?.night||1});
+      buildRoleCard();
+      toast(`🔍 ${m.name}: ${m.isMafia?'🔴 МАФІЯ!':'🟢 Мирний'}`,m.isMafia?'err':'ok');break;
+
+    case 'night_acted':S.nightActed=true;break;
+    case 'game_over':onGameOver(m);break;
+
+    case 'snapshot':{
+      const wasAlive2=S.myAlive;
+      const prevPhase=S.phase;
+      S.snap=m;S.myAlive=m.myAlive;S.phase=m.phase;
+      if(m.myRole&&m.myRole!==S.myRole){S.myRole=m.myRole;updatePill(false);buildRoleCard();}
+      // On first reconnect snapshot — route to correct screen
+      if(S.myId&&!prevPhase&&m.phase!=='lobby'){
+        showScreen('sc-game');
+        document.getElementById('rolePill').classList.add('on');
+        restoreGameFromSnap(m);
+        saveS();break;
+      }
+      if(wasAlive2&&!S.myAlive&&!S.deadDismissed&&m.phase!=='game_over'&&m.phase!=='finished')showDead();
+      if(!S.myAlive&&m.phase!=='game_over'&&m.phase!=='finished')updatePill(true);
+      fromSnap();saveS();break;}
+    case 'pong':break;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CINEMATIC ENGINE
+// ═══════════════════════════════════════════════
+let cinTimer=null;
+let cinStarsRAF=null;
+
+const CIN_BG={
+  sunset:'linear-gradient(180deg,#3d1a08 0%,#1a0a04 50%,#08080e 100%)',
+  night:'linear-gradient(180deg,#08040f 0%,#030308 100%)',
+  dawn:'linear-gradient(180deg,#2d1a0e 0%,#1a0a06 40%,#080810 100%)',
+  day:'linear-gradient(180deg,#1a1400 0%,#0a0c12 100%)',
+  mafia:'linear-gradient(180deg,#1a0404 0%,#080408 100%)',
+  sheriff:'linear-gradient(180deg,#0a0a02 0%,#050508 100%)',
+  doctor:'linear-gradient(180deg,#021a08 0%,#020808 100%)',
+  sleep:'linear-gradient(180deg,#04040e 0%,#020208 100%)',
+  death:'linear-gradient(180deg,#1a0204 0%,#080208 100%)',
+  victory:'linear-gradient(180deg,#0a1a04 0%,#04080e 100%)',
+};
+
+// cinStarted: timestamp when cinematic began — used to guarantee minimum display
+let cinStarted=0, cinTotal=0;
+
+function playCinematic(slides, onDone){
+  if(cinTimer){clearTimeout(cinTimer);cinTimer=null;}
+  const ov=document.getElementById('cinema');
+  const prog=document.getElementById('cinProg');
+  const content=document.getElementById('cinContent');
+
+  prog.innerHTML=slides.map((_,i)=>`<div class="cin-dot" id="cd${i}"></div>`).join('');
+  startCinStars();
+  cinStarted=Date.now();
+  cinTotal=slides.reduce((a,sl)=>a+(sl.dur||2000),0);
+
+  let idx=0;
+  function showSlide(){
+    if(idx>=slides.length){
+      // Guarantee player sees at least min(1800ms, total) regardless of lag
+      const elapsed=Date.now()-cinStarted;
+      const minShow=Math.min(1800, cinTotal);
+      const wait=Math.max(0, minShow-elapsed);
+      setTimeout(()=>{hideCinematic();if(onDone)onDone();}, wait);
+      return;
+    }
+    const sl=slides[idx];
+    // Smooth background transition
+    ov.style.transition='background 1.1s ease';
+    ov.style.background=sl.bg||CIN_BG.night;
+    ov.className='cinema show';
+    prog.querySelectorAll('.cin-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+    // Animate content: fade out → swap text → fade in
+    content.style.cssText='opacity:0;transform:translateY(14px) scale(.95);transition:none';
+    setTimeout(()=>{
+      document.getElementById('cinIcon').textContent=sl.icon||'🌙';
+      document.getElementById('cinTitle').textContent=sl.title||'';
+      document.getElementById('cinSub').textContent=sl.sub||'';
+      content.style.cssText='opacity:1;transform:none;transition:opacity .55s ease,transform .55s var(--smooth)';
+    },250);
+    idx++;
+    cinTimer=setTimeout(showSlide, sl.dur||2000);
+  }
+  showSlide();
+}
+
+function hideCinematic(){
+  const ov=document.getElementById('cinema');
+  ov.style.transition='opacity .6s ease';
+  ov.style.opacity='0';
+  setTimeout(()=>{
+    ov.className='cinema';
+    ov.style.transition='';
+    ov.style.opacity='';
+    if(cinStarsRAF){cancelAnimationFrame(cinStarsRAF);cinStarsRAF=null;}
+  },650);
+}
+
+function startCinStars(){
+  const cv=document.getElementById('cinStars');
+  const ov=document.getElementById('cinema');
+  cv.width=window.innerWidth;cv.height=window.innerHeight;
+  const ctx=cv.getContext('2d');
+  // Static stars
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const staticS=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.2+.2,a:Math.random()*.7+.1}));
+  staticS.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,240,${s.a})`;ctx.fill();});
+  // Twinkling
+  const tw=Array.from({length:15},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*2+.5,sp:Math.random()*.02+.005,off:Math.random()*Math.PI*2}));
+  let f=0;
+  function tick(){
+    if(!document.getElementById('cinema').classList.contains('show')){return;}
+    f++;
+    tw.forEach(s=>{
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,230,100,${((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1})`;
+      ctx.fill();
+    });
+    cinStarsRAF=requestAnimationFrame(tick);
+  }
+  cinStarsRAF=requestAnimationFrame(tick);
+}
+
+// ── NIGHT CINEMATICS SEQUENCE ─────────────────
+function getNightSlides(role, night){
+  const intro=[
+    {bg:CIN_BG.sunset, icon:'🌆', title:'Сонце заходить за обрій...', sub:`Ніч ${night} починається`, dur:2000},
+    {bg:CIN_BG.night,  icon:'🌙', title:'Настає темна ніч...', sub:'Зірки запалюються над містом', dur:2000},
+    {bg:CIN_BG.night,  icon:'🏘️', title:'Місто поступово засинає...', sub:'Вогні гаснуть один за одним', dur:1800},
+  ];
+  const roleSlide={
+    mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...', sub:'Темні справи ніколи не сплять', dur:1800},
+    sheriff: {bg:CIN_BG.sheriff, icon:'⭐', title:'Прокидається шериф...', sub:'Час розкрити правду міста', dur:1800},
+    doctor:  {bg:CIN_BG.doctor,  icon:'💊', title:'Прокидається лікар...', sub:'Хтось потребує захисту сьогодні', dur:1800},
+    civilian:{bg:CIN_BG.sleep,   icon:'💤', title:'Ти мирно спиш...', sub:'До ранку ще далеко...', dur:1800},
+  };
+  if(!S.myAlive){
+    return [...intro,{bg:CIN_BG.sleep,icon:'👻',title:'Ти спостерігаєш...',sub:'Дух міста не спить',dur:1800}];
+  }
+  return [...intro, roleSlide[role]||roleSlide.civilian];
+}
+
+function getDawnSlides(log){
+  const slides=[
+    {bg:CIN_BG.dawn,   icon:'✨', title:'Ніч добігає кінця...', sub:'Місто чекає на світанок', dur:2000},
+    {bg:CIN_BG.dawn,   icon:'🌅', title:'Сонце повільно сходить...', sub:'Новий день приносить відповіді', dur:2000},
+  ];
+  (log||[]).forEach(ev=>{
+    slides.push({
+      bg: ev.emoji==='💀'?CIN_BG.death:(ev.emoji==='🏥'?CIN_BG.doctor:CIN_BG.dawn),
+      icon:ev.emoji, title:ev.text, sub:'', dur:3000,
+    });
+  });
+  slides.push({bg:CIN_BG.day, icon:'☀️', title:'Місто прокидається...', sub:'Час говорити та шукати правду', dur:1800});
+  return slides;
+}
+
+function getDaySlides(){
+  return[
+    {bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:2000},
+  ];
+}
+
+// ── PHASES ────────────────────────────────────
+function onPhase(m){
+  S.phase=m.phase;S.nightActed=false;S.nightTarget=null;S.myVote=undefined;
+  document.getElementById('voteSheet').classList.remove('open');
+  document.getElementById('deadOv').classList.remove('show');
+
+  switch(m.phase){
+    case 'night':
+      setPhase('🌙 НІЧ',`Ніч ${m.night}`);
+      vib([80,40,80]);
+      playCinematic(getNightSlides(S.myRole||'civilian',m.night),()=>renderNight());
+      break;
+    case 'dawn':
+      setPhase('🌅 СВІТАНОК','');
+      playCinematic(getDawnSlides(m.log||[]),()=>renderDawn(m.log||[]));
+      break;
+    case 'day':
+      setPhase('☀️ ДЕНЬ','Обговорення');
+      vib(50);
+      playCinematic(getDaySlides(),()=>renderDay());
+      break;
+    case 'voting':
+      setPhase('⚖️ ГОЛОСУВАННЯ','');
+      if(S.myAlive)openVotes();
+      break;
+  }
+}
+
+function fromSnap(){
+  const snap=S.snap;if(!snap)return;
+  if(snap.phase==='lobby'){renderLobby(snap);return;}
+  if(snap.phase==='voting'&&Object.keys(snap.votes).length>0)renderVotes(snap.votes);
+}
+
+function restoreGameFromSnap(snap){
+  if(snap.phase==='finished'||snap.phase==='game_over'){
+    document.getElementById('rolePill').classList.remove('on');
+    if(snap.winner){
+      const win=snap.winner==='civilians'?S.myRole!=='mafia':S.myRole==='mafia';
+      const players=snap.revealedRoles?.map(r=>{
+        const p=snap.players.find(pp=>pp.id===r.id)||{};
+        return{...p,...r};
+      })||snap.players;
+      showGameOver({winner:snap.winner,message:'',players},win);
+    }
+    return;
+  }
+  updatePill(!snap.myAlive);
+  buildRoleCard();
+  switch(snap.phase){
+    case 'night': setPhase('🌙 НІЧ',`Ніч ${snap.night||1}`); renderNight(); break;
+    case 'dawn':  setPhase('🌅 СВІТАНОК',''); renderDawn(snap.nightLog||[]); break;
+    case 'day':   setPhase('☀️ ДЕНЬ','Обговорення'); renderDay(); break;
+    case 'voting':setPhase('⚖️ ГОЛОСУВАННЯ',''); renderDay();
+      if(snap.myAlive) setTimeout(openVotes,300); break;
+  }
+}
+
+// ── AVATAR HELPER ─────────────────────────────
+function av(name,url,sz=40,style=''){
+  const i=(name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const c=['#805ad5','#3182ce','#2f855a','#c05621','#b7791f','#97266d'][(name.charCodeAt(0)||0)%6];
+  const b=`width:${sz}px;height:${sz}px;border-radius:50%;flex-shrink:0;${style}`;
+  if(url)return`<div style="${b}overflow:hidden;background:${c}"><img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='${i}'"></div>`;
+  return`<div style="${b}background:${c};display:flex;align-items:center;justify-content:center;font-size:${Math.round(sz*.37)}px;font-weight:700;color:#fff">${i}</div>`;
+}
+
+// ── LOBBY ─────────────────────────────────────
+function renderLobby(snap){
+  const ps=snap.players;
+  document.getElementById('lobbyCount').textContent=ps.length;
+  document.getElementById('minHint').style.display=ps.length>=4?'none':'';
+  document.getElementById('lobbyPlayers').innerHTML=ps.map(p=>`
+    <div class="player-row">
+      ${av(p.name,p.avatarUrl||'')}
+      <div class="pn" style="flex:1;min-width:0">${esc(p.name)}${p.tgVerified?'<span class="tg-check">✓</span>':''}${p.isHost?'<span class="pbadge">Хост</span>':''}${p.id===S.myId?'<span style="color:var(--text3);font-size:11px">(ти)</span>':''}</div>
+      ${S.isHost&&!p.isHost?`<button class="btn btn-ghost btn-sm" onclick="kick('${p.id}')" style="width:auto;padding:5px 11px;color:var(--red2)">✕</button>`:''}
+      <div class="pdot ${p.connected?'':'off'}"></div>
+    </div>`).join('');
+  const sb=document.getElementById('startBtn');
+  sb.style.display=S.isHost?'flex':'none';sb.disabled=ps.length<4;sb.style.opacity=ps.length<4?.5:1;
+}
+
+// ── NIGHT ─────────────────────────────────────
+function renderNight(){
+  const snap=S.snap;const C=document.getElementById('phaseC');
+  if(S.nightActed||!S.myAlive||S.myRole==='civilian'){
+    C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
+      <div class="night-content"><div style="font-size:52px;margin:16px 0 4px;filter:drop-shadow(0 0 20px rgba(200,180,255,.6));animation:moonGlow 3s ease-in-out infinite">🌙</div>
+      <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
+      <div class="night-sleep"><div class="zzz">💤</div>
+      <div style="font-size:14px;color:var(--text2)">${!S.myAlive?'☠️ Ти загинув. Спостерігай.':S.nightActed?'Дію виконано! Очікуємо…':'Мирні спочивають вночі…'}</div>
+      </div></div></div>`;
+    drawStars('sc');return;
+  }
+  const alive=snap?.players?.filter(p=>p.alive&&p.id!==S.myId)||[];
+  const r=ROLES[S.myRole];
+  const tc={mafia:'sm',sheriff:'ss',doctor:'sd'}[S.myRole];
+  const lbl={mafia:'🎯 Оберіть жертву',sheriff:'🔍 Кого перевірити?',doctor:'💊 Кого врятувати?'}[S.myRole];
+  // Skip button text per role
+  const skipTxt={mafia:'Пропустити вбивство',sheriff:'Пропустити перевірку',doctor:'Нікого не рятувати'}[S.myRole];
+
+  C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
+    <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
+    <div class="night-content" style="width:100%">
+      <div style="font-size:52px;margin:14px 0 4px;filter:drop-shadow(0 0 20px rgba(200,180,255,.6));animation:moonGlow 3s ease-in-out infinite">🌙</div>
+      <div class="night-role-label" style="color:${r.color}">${lbl}</div>
+      <div class="night-sub">Натисни на гравця</div>
+      <div class="night-actions">
+        ${alive.map(p=>`
+          <div class="apc ${S.nightTarget===p.id?tc:''}" onclick="selTgt('${p.id}','${tc}',this)">
+            <div class="apc-av">${p.avatarUrl?`<img src="${esc(p.avatarUrl)}" onerror="this.parentNode.innerHTML='${p.name[0].toUpperCase()}'">`:p.name[0].toUpperCase()}</div>
+            <div class="apc-name">${esc(p.name)}${p.tgVerified?'<span class="tg-check">✓</span>':''}</div>
+            <div class="apc-chk">${S.nightTarget===p.id?'✓':''}</div>
+          </div>`).join('')}
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-danger" id="confBtn" onclick="confNight()" ${S.nightTarget?'':'disabled style="opacity:.4"'}>Підтвердити дію</button>
+        <button class="btn btn-ghost btn-sm" onclick="skipNight()" style="font-size:12px;color:var(--text3)">${skipTxt}</button>
+      </div>
+    </div></div>`;
+  drawStars('sc');
+}
+
+function selTgt(id,cls,el){
+  S.nightTarget=id;
+  document.querySelectorAll('.apc').forEach(e=>{e.classList.remove('sm','ss','sd');e.querySelector('.apc-chk').textContent='';});
+  el.classList.add(cls);el.querySelector('.apc-chk').textContent='✓';
+  const b=document.getElementById('confBtn');if(b){b.disabled=false;b.style.opacity=1;}
+  vib(8);
+}
+function confNight(){
+  if(!S.nightTarget)return;
+  wsSend({type:'night_action',targetId:S.nightTarget});vib([50,30,50]);
+  // Show "acted" slide
+  playCinematic([{
+    bg:CIN_BG.sleep,icon:'💤',
+    title:{mafia:'Мафія засинає...',sheriff:'Шериф засинає...',doctor:'Лікар засинає...'}[S.myRole]||'Засинаєш...',
+    sub:'Справи зроблено на цю ніч',dur:2000
+  }],()=>renderNight());
+}
+function skipNight(){
+  wsSend({type:'night_action',targetId:null});vib([20,10,20]);
+  playCinematic([{bg:CIN_BG.sleep,icon:'💤',title:'Ти пропускаєш...',sub:'Місто чекає на ранок',dur:1500}],()=>renderNight());
+}
+
+// ── DAWN ──────────────────────────────────────
+function renderDawn(log){
+  // Dawn is shown via cinematic, here just show the aftermath static view
+  const C=document.getElementById('phaseC');
+  C.innerHTML=`<div style="flex:1;background:linear-gradient(180deg,#1a0a08,#0f0a08);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:16px">
+    <div style="font-size:56px;animation:sunRise 1s var(--spring) both">🌅</div>
+    <style>@keyframes sunRise{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}</style>
+    <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:4px;color:var(--gold2)">СВІТАНОК</div>
+    ${(log||[]).map(e=>`<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:12px 16px;width:100%;max-width:380px;animation:rcIn .4s var(--spring) both">
+      <span style="font-size:22px">${e.emoji}</span><span style="font-size:14px;color:var(--text);line-height:1.4">${esc(e.text)}</span></div>`).join('')}
+  </div>`;
+}
+
+// ── DAY ───────────────────────────────────────
+function renderDay(){
+  const snap=S.snap;const ps=snap?.players||[];
+  document.getElementById('phaseC').innerHTML=`
+    <div class="day-view phase-view">
+      <div class="day-strip">${ps.map(p=>`<div class="dpc ${p.alive?'':'dead'}">
+        <div class="dav" style="${p.id===S.myId?'border-color:var(--purple)':''}">
+          ${p.avatarUrl?`<img src="${esc(p.avatarUrl)}" onerror="this.parentNode.innerHTML='${p.name[0].toUpperCase()}'">`:p.name[0].toUpperCase()}
+        </div>
+        <div class="dn">${esc(p.name)}</div></div>`).join('')}
+      </div>
+      <div class="chat-area" id="chatArea"><div class="chat-sys">☀️ Починайте обговорення! Голосування з'явиться через 1 хвилину.</div></div>
+      ${S.myAlive?`<div class="chat-bar"><textarea class="chat-in" id="chatIn" placeholder="Повідомлення…" rows="1" maxlength="300"></textarea>
+        <button class="send-btn" id="sendBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>`:''}
+    </div>`;
+  if(snap?.messages){snap.messages.forEach(m=>appendMsg(m,false));scrollChat();}
+  const ci=document.getElementById('chatIn');const sb=document.getElementById('sendBtn');
+  if(ci&&sb){
+    function doSend(){const t=ci.value.trim();if(!t)return;wsSend({type:'chat',text:t});ci.value='';ci.style.height='';}
+    sb.addEventListener('click',doSend);
+    ci.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}});
+    ci.addEventListener('input',()=>{ci.style.height='auto';ci.style.height=Math.min(ci.scrollHeight,100)+'px';});
+  }
+}
+function appendMsg(m,scroll=true){
+  const a=document.getElementById('chatArea');if(!a)return;
+  const mine=m.playerId===S.myId;
+  const sender=S.snap?.players?.find(p=>p.id===m.playerId);
+  const el=document.createElement('div');el.className=`chat-msg ${mine?'mine':'theirs'}`;
+  el.innerHTML=`${!mine?`<div class="chat-name">${sender?.avatarUrl?`<img src="${esc(sender.avatarUrl)}" style="width:14px;height:14px;border-radius:50%;object-fit:cover">`:''}${esc(m.name)}${sender?.tgVerified?'<span class="tg-check">✓</span>':''}</div>`:''}
+    <div class="chat-bubble">${esc(m.text)}</div><div class="chat-time">${m.time||''}</div>`;
+  a.appendChild(el);if(scroll)scrollChat();
+}
+function scrollChat(){const a=document.getElementById('chatArea');if(a)a.scrollTop=a.scrollHeight;}
+
+// ── VOTING ────────────────────────────────────
+function openVotes(){document.getElementById('voteSheet').classList.add('open');renderVotes(S.snap?.votes||{});}
+function renderVotes(votes){
+  if(!S.snap)return;const vl=document.getElementById('vList');if(!vl)return;
+  const ps=S.snap.players.filter(p=>p.alive&&p.id!==S.myId);
+  const cnt={};Object.values(votes).forEach(id=>{if(id)cnt[id]=(cnt[id]||0)+1;});
+  vl.innerHTML=ps.map(p=>{const n=cnt[p.id]||0;return`
+    <div class="vc ${n>0?'von':''} ${S.myVote===p.id?'myv':''}" onclick="doVote('${p.id}')">
+      <div class="v-av">${p.avatarUrl?`<img src="${esc(p.avatarUrl)}" onerror="this.parentNode.innerHTML='${p.name[0].toUpperCase()}'">`:p.name[0].toUpperCase()}</div>
+      <div class="v-name">${esc(p.name)}${p.tgVerified?'<span class="tg-check">✓</span>':''}</div>
+      <div class="v-cnt ${n>0?'hv':''}">${n||''}</div>
+    </div>`;}).join('');
+  const alive=S.snap.players.filter(p=>p.alive).length;
+  const cast=Object.keys(votes).length;
+  const sub=document.getElementById('vSub');if(sub)sub.textContent=`Проголосували: ${cast}/${alive}`;
+}
+function doVote(id){if(!S.myAlive)return;S.myVote=id;wsSend({type:'vote',targetId:id});vib(10);renderVotes(S.snap?.votes||{});}
+document.getElementById('skipVote').addEventListener('click',()=>{S.myVote=null;wsSend({type:'vote',targetId:null});toast('Голосування пропущено');vib(5);});
+
+// ── GAME OVER ─────────────────────────────────
+function onGameOver(m){
+  S.phase='game_over';S.lastGameOver=m;
+  document.getElementById('voteSheet').classList.remove('open');
+  document.getElementById('deadOv').classList.remove('show');
+  closeRole();
+  document.getElementById('rolePill').classList.remove('on');
+  const win=m.winner==='civilians'?S.myRole!=='mafia':S.myRole==='mafia';
+  // Keep session so player can reconnect and see results + play again
+  saveS();
+  const icon=m.winner==='civilians'?'🕊️':'🔫';
+  const title=m.winner==='civilians'?'Місто врятоване!':'Мафія захопила місто!';
+  const sub=win?'🏆 Ти переміг!':'😔 Ти програв...';
+  playCinematic([{bg:CIN_BG.victory,icon,title,sub,dur:2800}],()=>showGameOver(m,win));
+  vib(win?[200,100,200,100,400]:[400,100,100]);
+}
+function showGameOver(m,win){
+  document.getElementById('phaseC').innerHTML=`
+    <div class="go-view phase-view">
+      <div class="win-banner">
+        <span class="win-emoji">${m.winner==='civilians'?'🕊️':'🔫'}</span>
+        <div class="win-title" style="color:${m.winner==='civilians'?'#68d391':'#fc8181'}">${m.winner==='civilians'?'МИРНІ ПЕРЕМОГЛИ':'МАФІЯ ПЕРЕМОГЛА'}</div>
+        <div class="win-sub">${win?'🏆 Ти переміг!':'😔 Ти програв'}</div>
+        <div style="margin-top:6px;font-size:13px;color:var(--text3)">${m.message}</div>
+      </div>
+      <div class="reveal-list">${m.players.map(p=>`
+        <div class="rc">
+          <div class="r-av" style="background:${RC[p.role]}22;color:${RC[p.role]}">
+            ${p.avatarUrl?`<img src="${esc(p.avatarUrl)}" onerror="this.parentNode.innerHTML='${ROLES[p.role]?.emoji||'?'}'">`:ROLES[p.role]?.emoji||'?'}
+          </div>
+          <div class="r-name ${p.alive?'':'dead'}">${esc(p.name)}${p.tgVerified?'<span class="tg-check">✓</span>':''}${p.id===S.myId?'<span style="color:var(--text3);font-size:11px">(ти)</span>':''}</div>
+          <div class="r-badge" style="background:${RC[p.role]}22;color:${RC[p.role]}">${ROLES[p.role]?.name||p.role}</div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px">
+        ${S.isHost?'<button class="btn btn-primary" onclick="doRestartGame()">🔄 Грати ще раз</button>':
+          '<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px">Чекай поки хост запустить нову гру...</div>'}
+        <button class="btn btn-ghost" onclick="leaveGame()">← Вийти</button>
+      </div>
+    </div>`;
+}
+
+// ── ROLE PILL ─────────────────────────────────
+function updatePill(isDead){
+  const pill=document.getElementById('rolePill');
+  if(!S.myRole){pill.classList.remove('on');return;}
+  pill.classList.add('on');
+  pill.classList.toggle('dead',isDead);
+  document.getElementById('rpIc').textContent=isDead?'💀':'🎭';
+  document.getElementById('rpLbl').textContent=isDead?'Загинув':'Моя роль';
+}
+function buildRoleCard(){
+  const role=S.myRole;if(!role)return;
+  const r=ROLES[role];const content=document.getElementById('roleContent');
+  let extra='';
+  if(role==='mafia'&&S.mafiaTeam.length>0)extra=`<div class="mafia-team"><div class="mt-title">🔴 Ваша команда мафії</div>${S.mafiaTeam.map(m=>`<div class="mt-row">${av(m.name,m.avatarUrl||'',30)}<span style="font-size:14px;font-weight:600">${esc(m.name)}</span>${m.tgVerified?'<span class="tg-check">✓</span>':''}</div>`).join('')}</div>`;
+  if(role==='sheriff'&&S.sheriffLog.length>0)extra=`<div class="slog"><div class="sl-title">🔍 Результати перевірок</div>${S.sheriffLog.map(r=>`<div class="sl-row">Ніч ${r.night}: <strong>${esc(r.name)}</strong> — <span class="${r.isMafia?'mtag':'ctag'}">${r.isMafia?'🔴 МАФІЯ':'🟢 Чистий'}</span></div>`).join('')}</div>`;
+  const dead=!S.myAlive?`<div class="role-dead">☠️ Ти загинув. Можеш спостерігати за грою.</div>`:'';
+  content.innerHTML=`<div class="role-emblem" style="color:${r.color};border-color:${r.color};background:${r.color}15">${r.emoji}</div>
+    <div class="role-rname" style="color:${r.color}">${r.name}</div><div class="role-desc">${r.desc}</div>${dead}${extra}`;
+}
+function openRole(){if(S.phase==='game_over')return;document.getElementById('roleOv').classList.add('open');document.getElementById('rolePanel').classList.add('open');vib(8);}
+function closeRole(){document.getElementById('roleOv').classList.remove('open');document.getElementById('rolePanel').classList.remove('open');}
+
+// ── DEAD OVERLAY ──────────────────────────────
+function showDead(){document.getElementById('deadOv').classList.add('show');vib([300,100,300]);}
+function observe(){S.deadDismissed=true;document.getElementById('deadOv').classList.remove('show');toast('👻 Спостерігаєш за грою');}
+
+// ── SHARE / CODE ──────────────────────────────
+function openShareMenu(){
+  const menu=document.getElementById('shareMenu');
+  // Show Telegram share only if bot is configured
+  document.getElementById('shareTgBtn').style.display=S.botUsername?'flex':'none';
+  menu.classList.add('show');
+}
+function closeShare(e){
+  if(!e||e.target===document.getElementById('shareMenu')||e.currentTarget!==document.getElementById('shareMenu')){
+    document.getElementById('shareMenu').classList.remove('show');
+  }
+}
+document.getElementById('shareCopyBtn').addEventListener('click',()=>{
+  const code=S.code||document.getElementById('lobbyCode').textContent;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(()=>toast('Код скопійовано! 📋','ok')).catch(()=>{fallbackCopy(code);});
+  } else {fallbackCopy(code);}
+  document.getElementById('shareMenu').classList.remove('show');
+});
+document.getElementById('shareTgBtn').addEventListener('click',()=>{
+  const code=S.code;
+  if(!code||!S.botUsername)return;
+  const url=`https://t.me/${S.botUsername}?start=${code}`;
+  if(tg?.openTelegramLink){tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Заходь грати в Мафію! Код: '+code)}`);
+  } else {window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Грати в Мафію! Код: '+code)}`,'_blank');}
+  document.getElementById('shareMenu').classList.remove('show');
+});
+function fallbackCopy(text){
+  const el=document.createElement('textarea');el.value=text;el.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(el);el.select();try{document.execCommand('copy');toast('Код скопійовано! 📋','ok');}catch{}
+  document.body.removeChild(el);
+}
+document.getElementById('codeBlock').addEventListener('click',()=>{
+  // If Telegram WebApp — show menu, otherwise just copy
+  if(tg&&S.botUsername){openShareMenu();}
+  else{
+    const code=document.getElementById('lobbyCode').textContent;
+    fallbackCopy(code);
+  }
+});
+
+// ── UI HELPERS ────────────────────────────────
+function setPhase(p,s){document.getElementById('tPhase').textContent=p;document.getElementById('tNight').textContent=s;}
+function updTimer(t){const el=document.getElementById('tTimer');if(!el)return;el.textContent=t;el.className='t-timer'+(t<=10?' urgent':'');}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{
+    const on=s.id===id;
+    if(on&&!s.classList.contains('active')){
+      s.style.transform='translateY(18px) scale(.985)';
+      s.style.opacity='0';
+      s.classList.add('active');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        s.style.transform='';s.style.opacity='';
+      }));
+    } else if(!on){s.classList.remove('active');}
+  });
+}
+function resetUI(){
+  S.myRole=null;S.myAlive=true;S.mafiaTeam=[];S.sheriffLog=[];
+  S.deadDismissed=false;S.nightActed=false;S.nightTarget=null;
+  document.getElementById('rolePill').classList.remove('on');
+  document.getElementById('voteSheet').classList.remove('open');
+  document.getElementById('deadOv').classList.remove('show');
+  closeRole();hideCinematic();
+}
+function backHome(){
+  if(S.myId&&S.code)wsSend({type:'leave_room'});
+  S.myId=null;S.code=null;S.phase=null;clearS();resetUI();showScreen('sc-home');
+}
+// ── GAME OVER ACTIONS ─────────────────────────
+function leaveGame(){
+  // працює з game-over екрану так само як звичайний вихід
+  backHome();
+}
+
+function doRestartGame(){
+  if(!S.isHost){ toast('Лише хост може перезапустити гру','err'); return; }
+  toast('Перезапуск…');
+  wsSend({type:'restart_game'}); // це саме те, що очікує server.js
+  vib(15);
+}
+
+function onRoomRestarted(){
+  // сервер повертає кімнату в lobby і надішле snapshot
+  S.phase='lobby';
+  S.lastGameOver=null;
+  resetUI();
+  showScreen('sc-lobby');
+  toast('Гру перезапущено. Збір гравців…','ok');
+}
+function kick(id){wsSend({type:'kick',targetId:id});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type=''){const c=document.getElementById('toastWrap');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.style.cssText+='opacity:0;transform:translateY(-8px) scale(.9);transition:.3s';setTimeout(()=>t.remove(),300);},2800);}
+function vib(p){try{navigator.vibrate?.(p);}catch{}}
+
+function openDev(){
+  const url = "https://t.me/Demoused";
+  if (tg?.openTelegramLink) tg.openTelegramLink(url);
+  else window.open(url, "_blank");
+  vib(10);
+}
+
+// ── STARS (for regular night view) ────────────
+function drawStars(id){
+  const cv=document.getElementById(id);if(!cv)return;
+  cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;
+  const ctx=cv.getContext('2d');
+  for(let i=0;i<100;i++){ctx.beginPath();ctx.arc(Math.random()*cv.width,Math.random()*cv.height,Math.random()*1.4+.2,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,240,${Math.random()*.7+.2})`;ctx.fill();}
+  const tw=Array.from({length:12},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*2+.5,sp:Math.random()*.02+.005,off:Math.random()*Math.PI*2}));
+  let f=0;function tick(){f++;tw.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,230,100,${((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1})`;ctx.fill();});requestAnimationFrame(tick);}tick();
+}
+
+// ── EVENTS ────────────────────────────────────
+document.getElementById('createBtn').addEventListener('click',()=>{
+  const name=(document.getElementById('nameIn').value.trim()||S.name);
+  if(!name){toast("Введи ім'я 👤",'err');return;}
+  S.name=name;vib(10);
+  wsSend({type:'create_room',name,avatarUrl:S.avatarUrl,tgVerified:S.tgVerified});
+});
+document.getElementById('joinBtn').addEventListener('click',()=>{
+  const name=(document.getElementById('nameIn').value.trim()||S.name);
+  const code=document.getElementById('codeIn').value.trim();
+  if(!name){toast("Введи ім'я 👤",'err');return;}
+  if(code.length!==5){toast('Код — 5 цифр 🔢','err');return;}
+  S.name=name;vib(10);
+  wsSend({type:'join_room',name,code,avatarUrl:S.avatarUrl,tgVerified:S.tgVerified});
+});
+document.getElementById('startBtn').addEventListener('click',()=>{wsSend({type:'start_game'});vib(20);});
+document.getElementById('leaveBtn').addEventListener('click',()=>{
+  if(S.myId&&S.code){wsSend({type:'leave_room'});}
+  else{clearS();S.myId=null;S.code=null;if(S.ws)S.ws.close();resetUI();showScreen('sc-home');setTimeout(connectWS,500);}
+});
+document.getElementById('codeIn').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,5);});
+
+// ── DEEP LINK (start=CODE from bot) ───────────
+const startParam=tg?.initDataUnsafe?.start_param||new URLSearchParams(location.search).get('start');
+if(startParam&&/^\d{5}$/.test(startParam)){
+  // Auto-fill code field when loaded via bot link
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('codeIn').value=startParam;
+  });
+  setTimeout(()=>{const ci=document.getElementById('codeIn');if(ci)ci.value=startParam;},500);
+}
+
+// ── INIT ──────────────────────────────────────
+if(loadS()){S.reconnecting=true;showScreen('sc-connect');showBanner();}
+connectWS();
+</script>
+</body>
+</html>
