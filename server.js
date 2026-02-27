@@ -126,6 +126,7 @@ function getSnapshot(room, forPlayerId) {
     votes: room.phase === 'voting' ? room.votes : {},
     mafiaVotes: me?.role === 'mafia' ? room.mafiaVotes : {},
     nightActed: room.nightActed,
+    nightTurn: room.nightTurn || null,
     winner: room.winner,
     revealedRoles: room.winner ? room.players.map(p => ({ id: p.id, role: p.role })) : [],
   };
@@ -218,6 +219,47 @@ function endGame(room, winner) {
 }
 
 // ─── NIGHT ───────────────────────────────────
+// Знайти першу роль у черзі (mafia → sheriff → doctor)
+function findFirstNightRole(room) {
+  const alive = getAlive(room);
+  for (const role of ['mafia', 'sheriff', 'doctor']) {
+    if (alive.some(p => p.role === role)) return role;
+  }
+  return null;
+}
+
+// Знайти наступну роль після current
+function findNextNightRole(room, current) {
+  const order = ['mafia', 'sheriff', 'doctor'];
+  const idx = order.indexOf(current);
+  if (idx === -1) return null;
+  const alive = getAlive(room);
+  for (let i = idx + 1; i < order.length; i++) {
+    if (alive.some(p => p.role === order[i])) return order[i];
+  }
+  return null;
+}
+
+// Перейти до наступного ходу або завершити ніч
+function advanceNightTurn(room) {
+  const next = findNextNightRole(room, room.nightTurn);
+  if (next) {
+    room.nightTurn = next;
+    broadcast(room, { type: 'night_turn', from: room.nightTurn === next ? null : room.nightTurn, to: next, prev: getPrevRole(room.nightTurn) });
+    broadcastState(room);
+  } else {
+    // Всі ролі відіграли — завершуємо ніч через 1с
+    clearTimers(room);
+    delay(room, () => endNight(room), 1000);
+  }
+}
+
+function getPrevRole(current) {
+  const order = ['mafia', 'sheriff', 'doctor'];
+  const idx = order.indexOf(current);
+  return idx > 0 ? order[idx - 1] : null;
+}
+
 function startNight(room) {
   clearTimers(room);
   room.phase = 'night';
@@ -229,24 +271,19 @@ function startNight(room) {
   room.nightActed = {};
   room.nightLog = [];
 
-  broadcast(room, { type: 'phase', phase: 'night', night: room.night });
+  const firstTurn = findFirstNightRole(room);
+  room.nightTurn = firstTurn;
+
+  broadcast(room, { type: 'phase', phase: 'night', night: room.night, turn: firstTurn });
   broadcastState(room);
 
-  startCountdown(room, 30, () => endNight(room));
+  // Загальний таймаут на всю ніч (90с = 30с × 3 ролі)
+  startCountdown(room, 90, () => endNight(room));
 }
 
+// Перевірка чи всі ролі відіграли (залишена для сумісності)
 function allNightActed(room) {
-  const alive = getAlive(room);
-  const hasMafia   = alive.some(p => p.role === 'mafia');
-  const hasSheriff = alive.some(p => p.role === 'sheriff');
-  const hasDoctor  = alive.some(p => p.role === 'doctor');
-
-  // Мафія готова якщо всі проголосували (target OR skip = nightActed['mafia'])
-  const mafiaOk   = !hasMafia   || room.nightActed['mafia'];
-  const sheriffOk = !hasSheriff || room.nightActed['sheriff'];
-  const doctorOk  = !hasDoctor  || room.nightActed['doctor'];
-
-  return mafiaOk && sheriffOk && doctorOk;
+  return !findNextNightRole(room, room.nightTurn || 'doctor');
 }
 
 function resolveMafiaVote(room) {
@@ -493,7 +530,7 @@ wss.on('connection', (ws) => {
         });
 
         broadcast(room, { type: 'game_starting' });
-        delay(room, () => startNight(room), 3000);
+        delay(room, () => startNight(room), 8000); // 8s = час для кінематика розкриття ролі
         broadcastState(room);
         break;
       }
@@ -501,18 +538,23 @@ wss.on('connection', (ws) => {
       // ── NIGHT ACTION ────────────────────────
       case 'night_action': {
         if (!room || !me?.alive || room.phase !== 'night') return;
+        // Перевіряємо що зараз черга цієї ролі
+        if (room.nightTurn !== me.role) return;
+        // Якщо роль вже відіграла — ігноруємо
+        if (room.nightActed[me.role]) return;
+
         const targetId = msg.targetId || null; // null = пропустити
 
         if (me.role === 'mafia') {
-          // Мафія може пропустити (targetId === null)
           room.mafiaVotes[myId] = targetId;
           room.mafiaTarget = resolveMafiaVote(room);
-          const mafiaTeam = room.players.filter(p => p.role === 'mafia');
-          mafiaTeam.forEach(p => send(p.ws, getSnapshot(room, p.id)));
-          // Якщо всі мафіозі проголосували (включно зі skip) — мафія готова
+          // Оновити знімок для мафії
+          room.players.filter(p => p.role === 'mafia').forEach(p => send(p.ws, getSnapshot(room, p.id)));
+          // Якщо всі мафіозі проголосували → роль відіграна
           const aliveMafia = getAlive(room).filter(p => p.role === 'mafia');
           const allMafiaVoted = aliveMafia.every(p => room.mafiaVotes[p.id] !== undefined);
-          if (allMafiaVoted) room.nightActed['mafia'] = true;
+          if (!allMafiaVoted) { send(ws, { type: 'night_acted' }); break; } // Чекаємо інших мафіозі
+          room.nightActed['mafia'] = true;
         } else if (me.role === 'sheriff') {
           if (targetId) {
             const t = room.players.find(p => p.id === targetId && p.alive);
@@ -530,9 +572,20 @@ wss.on('connection', (ws) => {
         }
 
         send(ws, { type: 'night_acted' });
-        if (allNightActed(room)) {
-          clearTimers(room);
-          delay(room, () => endNight(room), 500);
+
+        // Переходимо до наступної ролі
+        const prevTurn = room.nightTurn;
+        const nextTurn = findNextNightRole(room, prevTurn);
+        if (nextTurn) {
+          room.nightTurn = nextTurn;
+          // Невелика пауза перед переходом (час для кінематика "засинає")
+          delay(room, () => {
+            broadcast(room, { type: 'night_turn', from: prevTurn, to: nextTurn });
+            broadcastState(room);
+          }, 500);
+        } else {
+          // Всі відіграли — завершуємо ніч
+          delay(room, () => endNight(room), 1000);
         }
         break;
       }
