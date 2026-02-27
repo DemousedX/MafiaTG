@@ -8,25 +8,24 @@ import logging
 import os
 import subprocess
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 from dotenv import load_dotenv
 from telegram import (
+    BotCommand,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
     WebAppInfo,
-    BotCommand,
 )
 from telegram.constants import ParseMode
-from telegram.error import BadRequest
+from telegram.error import BadRequest, Forbidden, NetworkError, TelegramError
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
-    MessageHandler,
-    filters,
 )
 
 # ─────────────────────────────────────────────
@@ -46,6 +45,43 @@ logging.basicConfig(
 )
 log = logging.getLogger("MafiaBot")
 logging.getLogger("httpx").setLevel(logging.WARNING)
+
+# ─────────────────────────────────────────────
+# ТРЕКЕР ПОВІДОМЛЕНЬ БОТА
+# Зберігає ID повідомлень бота для кожного чату,
+# щоб видаляти їх перед показом нового меню.
+# ─────────────────────────────────────────────
+# { chat_id: [msg_id, msg_id, ...] }
+_bot_messages: dict[int, list[int]] = defaultdict(list)
+MAX_TRACKED = 20  # максимум відслідковуємо N повідомлень на чат
+
+def track_message(chat_id: int, msg_id: int) -> None:
+    lst = _bot_messages[chat_id]
+    lst.append(msg_id)
+    # Обрізаємо щоб не накопичувати нескінченно
+    if len(lst) > MAX_TRACKED:
+        _bot_messages[chat_id] = lst[-MAX_TRACKED:]
+
+async def delete_all_bot_messages(bot, chat_id: int) -> None:
+    """Видалити всі збережені повідомлення бота в цьому чаті."""
+    msg_ids = _bot_messages.pop(chat_id, [])
+    for msg_id in msg_ids:
+        try:
+            await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        except (BadRequest, Forbidden):
+            # Повідомлення вже видалено або немає прав — ігноруємо
+            pass
+        except TelegramError as e:
+            log.debug(f"delete_message {msg_id}: {e}")
+
+async def safe_delete(message) -> None:
+    """Видалити одне повідомлення без краша."""
+    try:
+        await message.delete()
+    except (BadRequest, Forbidden):
+        pass
+    except TelegramError as e:
+        log.debug(f"safe_delete: {e}")
 
 # ─────────────────────────────────────────────
 # ТЕКСТИ
@@ -116,7 +152,7 @@ def kb_main(url: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton("📖 Як грати", callback_data="help"),
             InlineKeyboardButton("📜 Правила",  callback_data="rules"),
         ],
-        [InlineKeyboardButton("📊 Статистика",  callback_data="stats")],
+        [InlineKeyboardButton("📊 Статистика", callback_data="stats")],
     ])
 
 def kb_back() -> InlineKeyboardMarkup:
@@ -133,15 +169,7 @@ def kb_back_play(url: str) -> InlineKeyboardMarkup:
 # ─────────────────────────────────────────────
 # УТИЛІТИ
 # ─────────────────────────────────────────────
-async def safe_delete(message) -> None:
-    """Видалити повідомлення, ігноруючи помилки (вже видалено, без прав тощо)."""
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
 async def fetch_stats() -> dict:
-    """Отримати статистику з Node.js сервера."""
     try:
         import aiohttp
         async with aiohttp.ClientSession() as session:
@@ -163,26 +191,40 @@ def build_stats_text(data: dict) -> str:
         + rf"🎮 *Зіграно ігор:* `{data.get('games', 0)}`"
     )
 
+async def send_menu(chat_id: int, bot, text: str, keyboard: InlineKeyboardMarkup) -> None:
+    """Відправити нове меню і зберегти ID повідомлення."""
+    try:
+        sent = await bot.send_message(
+            chat_id=chat_id,
+            text=text,
+            parse_mode=ParseMode.MARKDOWN_V2,
+            reply_markup=keyboard,
+        )
+        track_message(chat_id, sent.message_id)
+    except TelegramError as e:
+        log.error(f"send_menu failed: {e}")
+
 # ─────────────────────────────────────────────
-# КОМАНДИ  (кожна команда видаляє своє повідомлення)
+# КОМАНДИ
 # ─────────────────────────────────────────────
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Головне меню."""
+    chat_id = update.effective_chat.id
     await safe_delete(update.message)
+    await delete_all_bot_messages(ctx.bot, chat_id)
+
     if not WEBAPP_URL:
-        await update.effective_chat.send_message(
-            r"⚠️ Встанови `WEBAPP_URL` у \.env файлі",
-            parse_mode=ParseMode.MARKDOWN_V2,
-        )
+        sent = await ctx.bot.send_message(chat_id, "⚠️ Встанови WEBAPP_URL у .env")
+        track_message(chat_id, sent.message_id)
         return
-    # Якщо є start_param — це посилання з ботом+кодом кімнати
+
+    # Якщо start_param — запрошення в конкретну кімнату
     start_param = ctx.args[0] if ctx.args else None
     if start_param and start_param.isdigit() and len(start_param) == 5:
         url_with_code = f"{WEBAPP_URL}?start={start_param}"
-        await update.effective_chat.send_message(
+        await send_menu(
+            chat_id, ctx.bot,
             rf"🎮 *Запрошення в кімнату* `{start_param}`\!",
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardMarkup([[
                 InlineKeyboardButton(
                     f"🎭 Зайти в кімнату {start_param}",
                     web_app=WebAppInfo(url=url_with_code),
@@ -190,91 +232,110 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             ]]),
         )
         return
-    await update.effective_chat.send_message(
-        WELCOME_TEXT,
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=kb_main(WEBAPP_URL),
-    )
+
+    await send_menu(chat_id, ctx.bot, WELCOME_TEXT, kb_main(WEBAPP_URL))
 
 async def cmd_play(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Відкрити гру напряму."""
+    chat_id = update.effective_chat.id
     await safe_delete(update.message)
+    await delete_all_bot_messages(ctx.bot, chat_id)
     if not WEBAPP_URL:
         return
-    await update.effective_chat.send_message(
+    await send_menu(
+        chat_id, ctx.bot,
         r"🎮 *Натисни щоб відкрити гру\!*",
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=InlineKeyboardMarkup([[
+        InlineKeyboardMarkup([[
             InlineKeyboardButton("🎭 Грати зараз", web_app=WebAppInfo(url=WEBAPP_URL))
         ]]),
     )
 
 async def cmd_rules(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Правила гри."""
+    chat_id = update.effective_chat.id
     await safe_delete(update.message)
-    await update.effective_chat.send_message(
+    await delete_all_bot_messages(ctx.bot, chat_id)
+    await send_menu(
+        chat_id, ctx.bot,
         RULES_TEXT,
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
+        kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
     )
 
 async def cmd_stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Статистика сервера."""
+    chat_id = update.effective_chat.id
     await safe_delete(update.message)
+    await delete_all_bot_messages(ctx.bot, chat_id)
     data = await fetch_stats()
-    await update.effective_chat.send_message(
+    await send_menu(
+        chat_id, ctx.bot,
         build_stats_text(data),
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
+        kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
     )
 
 async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Довідка."""
+    chat_id = update.effective_chat.id
     await safe_delete(update.message)
-    await update.effective_chat.send_message(
+    await delete_all_bot_messages(ctx.bot, chat_id)
+    await send_menu(
+        chat_id, ctx.bot,
         HELP_TEXT,
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
+        kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
     )
 
 # ─────────────────────────────────────────────
-# CALLBACK — inline кнопки меню
+# CALLBACK — inline кнопки (редагують існуюче повідомлення)
 # ─────────────────────────────────────────────
 async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     q = update.callback_query
-    await q.answer()
+    try:
+        await q.answer()
+    except TelegramError:
+        pass  # query протух — не критично
+
+    async def edit(text: str, keyboard: InlineKeyboardMarkup) -> None:
+        try:
+            await q.edit_message_text(
+                text,
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=keyboard,
+            )
+        except BadRequest as e:
+            # "Message is not modified" або повідомлення видалено
+            if "not modified" not in str(e).lower():
+                log.debug(f"edit_message_text: {e}")
+        except TelegramError as e:
+            log.debug(f"edit_message_text error: {e}")
 
     if q.data == "main":
         if not WEBAPP_URL:
-            await q.edit_message_text("⚠️ WEBAPP_URL не налаштовано")
-            return
-        await q.edit_message_text(
-            WELCOME_TEXT,
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=kb_main(WEBAPP_URL),
-        )
+            await edit("⚠️ WEBAPP_URL не налаштовано", kb_back())
+        else:
+            await edit(WELCOME_TEXT, kb_main(WEBAPP_URL))
 
     elif q.data == "help":
-        await q.edit_message_text(
-            HELP_TEXT,
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
-        )
+        await edit(HELP_TEXT, kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back())
 
     elif q.data == "rules":
-        await q.edit_message_text(
-            RULES_TEXT,
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
-        )
+        await edit(RULES_TEXT, kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back())
 
     elif q.data == "stats":
         data = await fetch_stats()
-        await q.edit_message_text(
-            build_stats_text(data),
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back(),
-        )
+        await edit(build_stats_text(data), kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back())
+
+# ─────────────────────────────────────────────
+# GLOBAL ERROR HANDLER — не дає боту впасти
+# ─────────────────────────────────────────────
+async def error_handler(update: object, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    err = ctx.error
+    if isinstance(err, NetworkError):
+        log.warning(f"NetworkError (ігноруємо): {err}")
+    elif isinstance(err, Forbidden):
+        log.warning(f"Forbidden — бот заблокований користувачем: {err}")
+    elif isinstance(err, BadRequest):
+        log.warning(f"BadRequest: {err}")
+    elif isinstance(err, TelegramError):
+        log.error(f"TelegramError: {err}")
+    else:
+        log.exception(f"Неочікувана помилка: {err}", exc_info=err)
+    # Нічого не піднімаємо — бот продовжує роботу
 
 # ─────────────────────────────────────────────
 # NODE.JS УПРАВЛІННЯ
@@ -324,7 +385,7 @@ async def main_async():
         return
 
     if not WEBAPP_URL:
-        log.warning("⚠️  WEBAPP_URL не встановлено — кнопка гри буде недоступна")
+        log.warning("⚠️  WEBAPP_URL не встановлено — кнопка гри недоступна")
 
     # 1. Node.js
     global _node_process
@@ -340,16 +401,22 @@ async def main_async():
     # 2. Telegram Application
     app = Application.builder().token(BOT_TOKEN).build()
 
+    # Команди
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("play",  cmd_play))
     app.add_handler(CommandHandler("rules", cmd_rules))
     app.add_handler(CommandHandler("stats", cmd_stats))
     app.add_handler(CommandHandler("help",  cmd_help))
+
+    # Inline кнопки
     app.add_handler(CallbackQueryHandler(on_callback))
+
+    # Глобальний обробник помилок — бот не падає
+    app.add_error_handler(error_handler)
 
     await app.initialize()
 
-    # Встановити список команд у меню "/" в Telegram
+    # Меню "/" в Telegram
     await app.bot.set_my_commands([
         BotCommand("start", "🎭 Головне меню"),
         BotCommand("play",  "🎮 Відкрити гру"),
