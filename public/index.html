@@ -490,7 +490,7 @@ const S = {
   mafiaTeam:[], sheriffLog:[], nightActed:false,
   name:'', avatarUrl:'', tgVerified:false,
   nightTarget:null, myVote:undefined,
-  wsReady:false, reconnecting:false, deadDismissed:false,
+  wsReady:false, reconnecting:false, deadDismissed:false, nightTurn:null,
   botUsername:'',
 };
 const SK='mf_s';
@@ -588,10 +588,19 @@ function onMsg(m){
 
     case 'game_starting':
       S.phase='starting';S.mafiaTeam=[];S.sheriffLog=[];S.deadDismissed=false;
-      toast('🎭 Гра починається!','ok');vib([100,50,100]);
+      vib([100,50,100]);
       document.getElementById('rolePill').classList.add('on');
       document.getElementById('deadOv').classList.remove('show');
-      showScreen('sc-game');break;
+      showScreen('sc-game');
+      // Невеликий delay щоб role прийшла перед кінематиком
+      setTimeout(()=>{
+        const role=S.myRole||'civilian';
+        playCinematic(getIntroSlides(role),()=>{
+          // Нічого не робимо — сервер скоро надішле phase:night
+          setPhase('🎭 ПОЧАТОК','Ролі роздано');
+        });
+      },300);
+      break;
 
     case 'phase':onPhase(m);break;
     case 'tick':updTimer(m.time);break;
@@ -606,6 +615,7 @@ function onMsg(m){
       toast(`🔍 ${m.name}: ${m.isMafia?'🔴 МАФІЯ!':'🟢 Мирний'}`,m.isMafia?'err':'ok');break;
 
     case 'night_acted':S.nightActed=true;break;
+    case 'night_turn':onNightTurn(m);break;
     case 'game_over':onGameOver(m);break;
 
     case 'snapshot':{
@@ -634,20 +644,28 @@ let cinTimer=null;
 let cinStarsRAF=null;
 
 const CIN_BG={
-  sunset:'linear-gradient(180deg,#3d1a08 0%,#1a0a04 50%,#08080e 100%)',
-  night:'linear-gradient(180deg,#08040f 0%,#030308 100%)',
-  dawn:'linear-gradient(180deg,#2d1a0e 0%,#1a0a06 40%,#080810 100%)',
-  day:'linear-gradient(180deg,#1a1400 0%,#0a0c12 100%)',
-  mafia:'linear-gradient(180deg,#1a0404 0%,#080408 100%)',
-  sheriff:'linear-gradient(180deg,#0a0a02 0%,#050508 100%)',
-  doctor:'linear-gradient(180deg,#021a08 0%,#020808 100%)',
-  sleep:'linear-gradient(180deg,#04040e 0%,#020208 100%)',
-  death:'linear-gradient(180deg,#1a0204 0%,#080208 100%)',
-  victory:'linear-gradient(180deg,#0a1a04 0%,#04080e 100%)',
+  sunset: 'linear-gradient(180deg,#3d1a08 0%,#1a0a04 50%,#08080e 100%)',
+  night:  'linear-gradient(180deg,#08040f 0%,#030308 100%)',
+  dawn:   'linear-gradient(180deg,#2d1a0e 0%,#1a0a06 40%,#080810 100%)',
+  day:    'linear-gradient(180deg,#1a1400 0%,#0a0c12 100%)',
+  mafia:  'linear-gradient(180deg,#200404 0%,#100206 50%,#04020a 100%)',
+  sheriff:'linear-gradient(180deg,#1a1400 0%,#0c0a02 50%,#040408 100%)',
+  doctor: 'linear-gradient(180deg,#021a06 0%,#011008 50%,#020608 100%)',
+  sleep:  'linear-gradient(180deg,#04040e 0%,#020208 100%)',
+  death:  'linear-gradient(180deg,#200204 0%,#100108 50%,#040208 100%)',
+  victory:'linear-gradient(180deg,#081a04 0%,#040e02 50%,#04080a 100%)',
+  intro:  'linear-gradient(180deg,#100420 0%,#08021a 50%,#04020e 100%)',
+  reveal_mafia:   'linear-gradient(180deg,#280404 0%,#180208 50%,#080210 100%)',
+  reveal_sheriff: 'linear-gradient(180deg,#201400 0%,#140c00 50%,#060408 100%)',
+  reveal_doctor:  'linear-gradient(180deg,#022008 0%,#011404 50%,#020608 100%)',
+  reveal_civilian:'linear-gradient(180deg,#021428 0%,#020c1a 50%,#020810 100%)',
+  transition:     'linear-gradient(180deg,#060610 0%,#040408 100%)',
 };
 
 // cinStarted: timestamp when cinematic began — used to guarantee minimum display
 let cinStarted=0, cinTotal=0;
+// cinOnDone: additional callback hook (for night_turn queueing)
+let cinOnDone=null;
 
 function playCinematic(slides, onDone){
   if(cinTimer){clearTimeout(cinTimer);cinTimer=null;}
@@ -667,7 +685,11 @@ function playCinematic(slides, onDone){
       const elapsed=Date.now()-cinStarted;
       const minShow=Math.min(1800, cinTotal);
       const wait=Math.max(0, minShow-elapsed);
-      setTimeout(()=>{hideCinematic();if(onDone)onDone();}, wait);
+      setTimeout(()=>{
+        hideCinematic();
+        if(onDone)onDone();
+        if(cinOnDone){const cb=cinOnDone;cinOnDone=null;setTimeout(cb,700);}
+      }, wait);
       return;
     }
     const sl=slides[idx];
@@ -727,23 +749,66 @@ function startCinStars(){
   cinStarsRAF=requestAnimationFrame(tick);
 }
 
-// ── NIGHT CINEMATICS SEQUENCE ─────────────────
-function getNightSlides(role, night){
-  const intro=[
-    {bg:CIN_BG.sunset, icon:'🌆', title:'Сонце заходить за обрій...', sub:`Ніч ${night} починається`, dur:2000},
-    {bg:CIN_BG.night,  icon:'🌙', title:'Настає темна ніч...', sub:'Зірки запалюються над містом', dur:2000},
-    {bg:CIN_BG.night,  icon:'🏘️', title:'Місто поступово засинає...', sub:'Вогні гаснуть один за одним', dur:1800},
-  ];
-  const roleSlide={
-    mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...', sub:'Темні справи ніколи не сплять', dur:1800},
-    sheriff: {bg:CIN_BG.sheriff, icon:'⭐', title:'Прокидається шериф...', sub:'Час розкрити правду міста', dur:1800},
-    doctor:  {bg:CIN_BG.doctor,  icon:'💊', title:'Прокидається лікар...', sub:'Хтось потребує захисту сьогодні', dur:1800},
-    civilian:{bg:CIN_BG.sleep,   icon:'💤', title:'Ти мирно спиш...', sub:'До ранку ще далеко...', dur:1800},
+// ── CINEMATIC SEQUENCES ──────────────────────
+
+// 🎭 ВСТУП — розкриття ролі після старту гри
+function getIntroSlides(role){
+  const REVEAL={
+    mafia:   {bg:CIN_BG.reveal_mafia,   icon:'🔫', title:'ТИ — МАФІЯ',   sub:'Знищуй місто з тіні. Ніхто не повинен дізнатись.'},
+    sheriff: {bg:CIN_BG.reveal_sheriff, icon:'⭐', title:'ТИ — ШЕРИФ',   sub:'Знайди і знешкодь мафію. Місто вірить тобі.'},
+    doctor:  {bg:CIN_BG.reveal_doctor,  icon:'💊', title:'ТИ — ЛІКАР',   sub:'Рятуй невинних. Твоя уважність — їхнє життя.'},
+    civilian:{bg:CIN_BG.reveal_civilian,icon:'🏘️', title:'ТИ — МИРНИЙ', sub:'Знайди мафію обговоренням та голосуванням.'},
   };
-  if(!S.myAlive){
-    return [...intro,{bg:CIN_BG.sleep,icon:'👻',title:'Ти спостерігаєш...',sub:'Дух міста не спить',dur:1800}];
-  }
-  return [...intro, roleSlide[role]||roleSlide.civilian];
+  const rev=REVEAL[role]||REVEAL.civilian;
+  return[
+    {bg:CIN_BG.intro,        icon:'🎭', title:'Ролі роздано!',           sub:'Прочитай свою роль уважно',                      dur:2000},
+    {bg:rev.bg,              icon:rev.icon, title:rev.title,             sub:rev.sub,                                          dur:3200},
+    {bg:CIN_BG.transition,   icon:'🌆', title:'Перша ніч вже близько...', sub:'Місто готується до темряви',                    dur:1800},
+  ];
+}
+
+// 🌙 НІЧ — вступ (місто засинає)
+function getNightIntroSlides(night){
+  return[
+    {bg:CIN_BG.sunset,  icon:'🌆', title:'Сонце заходить за обрій...',  sub:`Ніч ${night} опускається на місто`,             dur:2000},
+    {bg:CIN_BG.night,   icon:'🌙', title:'Настає темна ніч...',         sub:'Зірки запалюються одна за одною',                dur:1800},
+    {bg:CIN_BG.sleep,   icon:'🏘️', title:'Місто поступово засинає...',  sub:'Мирні жителі не підозрюють про небезпеку',       dur:1800},
+  ];
+}
+
+// 🎬 Пробудження ролі (перший хід або після переходу)
+function getRoleWakeSlides(role){
+  const WAKE={
+    mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...',   sub:'Оберіть жертву цієї ночі'},
+    sheriff: {bg:CIN_BG.sheriff, icon:'⭐', title:'Прокидається шериф...',   sub:'Час розкрити правду міста'},
+    doctor:  {bg:CIN_BG.doctor,  icon:'💊', title:'Прокидається лікар...',   sub:'Хтось потребує захисту сьогодні'},
+  };
+  return[WAKE[role]||{bg:CIN_BG.sleep,icon:'💤',title:'Місто спить...',sub:'',dur:1500}];
+}
+
+// 😴 Засинання після дії
+function getRoleSleepSlides(role){
+  const txt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
+  return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:1800}];
+}
+
+// 🔄 Перехід між ролями: [from засинає] → [to прокидається]
+function getTurnTransitionSlides(from, to){
+  const sleepTxt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
+  const wakeTxt ={mafia:'Мафія прокидається...',sheriff:'Прокидається шериф...',doctor:'Прокидається лікар...'};
+  const wakeSub ={mafia:'Оберіть жертву цієї ночі',sheriff:'Час перевірити підозрюваного',doctor:'Хтось потребує захисту'};
+  const wakeBg  ={mafia:CIN_BG.mafia,sheriff:CIN_BG.sheriff,doctor:CIN_BG.doctor};
+  const slides=[];
+  if(from) slides.push({bg:CIN_BG.sleep,   icon:'💤', title:sleepTxt[from]||'Засинає...',    sub:'', dur:1800});
+  if(to)   slides.push({bg:wakeBg[to]||CIN_BG.sleep, icon:{mafia:'🔫',sheriff:'⭐',doctor:'💊'}[to]||'💤',
+                        title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:2000});
+  return slides.length?slides:[{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1000}];
+}
+
+// Старий getNightSlides залишається для сумісності з reconnect
+function getNightSlides(role, night){
+  if(!S.myAlive) return[...getNightIntroSlides(night),{bg:CIN_BG.sleep,icon:'👻',title:'Ти спостерігаєш...',sub:'Дух міста не спить',dur:1800}];
+  return [...getNightIntroSlides(night)];
 }
 
 function getDawnSlides(log){
@@ -777,7 +842,16 @@ function onPhase(m){
     case 'night':
       setPhase('🌙 НІЧ',`Ніч ${m.night}`);
       vib([80,40,80]);
-      playCinematic(getNightSlides(S.myRole||'civilian',m.night),()=>renderNight());
+      // Спочатку — місто засинає; потім очікуємо night_turn для пробудження ролі
+      S.nightTurn=m.turn||null;
+      playCinematic(getNightIntroSlides(m.night),()=>{
+        // Якщо вже знаємо чий хід — показуємо пробудження
+        if(S.nightTurn){
+          onNightTurnReady(null, S.nightTurn);
+        } else {
+          renderNightSleeping();
+        }
+      });
       break;
     case 'dawn':
       setPhase('🌅 СВІТАНОК','');
@@ -792,6 +866,41 @@ function onPhase(m){
       setPhase('⚖️ ГОЛОСУВАННЯ','');
       if(S.myAlive)openVotes();
       break;
+  }
+}
+
+// Обробка night_turn (перехід між ролями)
+function onNightTurn(m){
+  S.nightTurn=m.to;
+  // Якщо кінематик ще грає — чекаємо (рідкий кейс при reconnect)
+  const ov=document.getElementById('cinema');
+  if(ov.classList.contains('show')){
+    // Відкладаємо до завершення поточного кінематика
+    const prev=cinOnDone;
+    cinOnDone=()=>{if(prev)prev();onNightTurnReady(m.from,m.to);};
+    return;
+  }
+  onNightTurnReady(m.from,m.to);
+}
+
+// Показати перехід ролі + дію або сон
+function onNightTurnReady(from, to){
+  const isMine=to===S.myRole;
+  if(!S.myAlive){renderNightSleeping();return;}
+  if(from){
+    // Перехідний кінематик: [from засинає] → [to прокидається якщо це моя роль]
+    if(isMine){
+      playCinematic(getTurnTransitionSlides(from,to),()=>renderNight());
+    } else {
+      playCinematic(getTurnTransitionSlides(from,null),()=>renderNightSleeping());
+    }
+  } else {
+    // Перша роль ночі
+    if(isMine){
+      playCinematic(getRoleWakeSlides(to),()=>renderNight());
+    } else {
+      renderNightSleeping();
+    }
   }
 }
 
@@ -817,7 +926,7 @@ function restoreGameFromSnap(snap){
   updatePill(!snap.myAlive);
   buildRoleCard();
   switch(snap.phase){
-    case 'night': setPhase('🌙 НІЧ',`Ніч ${snap.night||1}`); renderNight(); break;
+    case 'night': setPhase('🌙 НІЧ',`Ніч ${snap.night||1}`); S.nightTurn=snap.nightTurn||null; renderNight(); break;
     case 'dawn':  setPhase('🌅 СВІТАНОК',''); renderDawn(snap.nightLog||[]); break;
     case 'day':   setPhase('☀️ ДЕНЬ','Обговорення'); renderDay(); break;
     case 'voting':setPhase('⚖️ ГОЛОСУВАННЯ',''); renderDay();
@@ -851,16 +960,27 @@ function renderLobby(snap){
 }
 
 // ── NIGHT ─────────────────────────────────────
+function renderNightSleeping(){
+  const C=document.getElementById('phaseC');
+  const txt=!S.myAlive?'☠️ Ти загинув. Спостерігай.':
+    S.nightActed?'Дію виконано! Очікуємо інших…':
+    S.myRole==='civilian'?'Мирні спочивають вночі…':
+    'Зачекай свого ходу...';
+  const turnInfo=S.nightTurn?` <div style="font-size:12px;color:var(--text3);margin-top:8px">Зараз діє: ${{'mafia':'🔫 Мафія','sheriff':'⭐ Шериф','doctor':'💊 Лікар'}[S.nightTurn]||''}</div>`:'';
+  C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
+    <div class="night-content"><div style="font-size:52px;margin:16px 0 4px;filter:drop-shadow(0 0 20px rgba(200,180,255,.6));animation:moonGlow 3s ease-in-out infinite">🌙</div>
+    <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
+    <div class="night-sleep"><div class="zzz">💤</div>
+    <div style="font-size:14px;color:var(--text2)">${txt}</div>${turnInfo}
+    </div></div></div>`;
+  drawStars('sc');
+}
+
 function renderNight(){
   const snap=S.snap;const C=document.getElementById('phaseC');
-  if(S.nightActed||!S.myAlive||S.myRole==='civilian'){
-    C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
-      <div class="night-content"><div style="font-size:52px;margin:16px 0 4px;filter:drop-shadow(0 0 20px rgba(200,180,255,.6));animation:moonGlow 3s ease-in-out infinite">🌙</div>
-      <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
-      <div class="night-sleep"><div class="zzz">💤</div>
-      <div style="font-size:14px;color:var(--text2)">${!S.myAlive?'☠️ Ти загинув. Спостерігай.':S.nightActed?'Дію виконано! Очікуємо…':'Мирні спочивають вночі…'}</div>
-      </div></div></div>`;
-    drawStars('sc');return;
+  // Якщо не моя черга, або вже відіграв, або мертвий/цивільний → спати
+  if(S.nightActed||!S.myAlive||S.myRole==='civilian'||S.nightTurn!==S.myRole){
+    renderNightSleeping();return;
   }
   const alive=snap?.players?.filter(p=>p.alive&&p.id!==S.myId)||[];
   const r=ROLES[S.myRole];
@@ -901,16 +1021,11 @@ function selTgt(id,cls,el){
 function confNight(){
   if(!S.nightTarget)return;
   wsSend({type:'night_action',targetId:S.nightTarget});vib([50,30,50]);
-  // Show "acted" slide
-  playCinematic([{
-    bg:CIN_BG.sleep,icon:'💤',
-    title:{mafia:'Мафія засинає...',sheriff:'Шериф засинає...',doctor:'Лікар засинає...'}[S.myRole]||'Засинаєш...',
-    sub:'Справи зроблено на цю ніч',dur:2000
-  }],()=>renderNight());
+  playCinematic(getRoleSleepSlides(S.myRole),()=>renderNightSleeping());
 }
 function skipNight(){
   wsSend({type:'night_action',targetId:null});vib([20,10,20]);
-  playCinematic([{bg:CIN_BG.sleep,icon:'💤',title:'Ти пропускаєш...',sub:'Місто чекає на ранок',dur:1500}],()=>renderNight());
+  playCinematic([{bg:CIN_BG.sleep,icon:'💤',title:'Ти пропускаєш...',sub:'Місто чекає на ранок',dur:1500}],()=>renderNightSleeping());
 }
 
 // ── DAWN ──────────────────────────────────────
