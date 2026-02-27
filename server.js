@@ -13,7 +13,17 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Stats API (для Telegram бота) ─────────────
+// ── Keep-alive ping (для UptimeRobot / Render) ──
+app.get('/ping', (req, res) => {
+  res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
+});
+
+// ── Health check ─────────────────────────────────
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', rooms: rooms.size });
+});
+
+// ── Stats API (для Telegram бота) ─────────────────
 let gamesPlayed = 0;
 
 app.get('/api/stats', (req, res) => {
