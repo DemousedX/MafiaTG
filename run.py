@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+from aiohttp import web
 from telegram import (
     BotCommand,
     InlineKeyboardButton,
@@ -36,6 +37,8 @@ BOT_TOKEN   = os.getenv("BOT_TOKEN", "")
 WEBAPP_URL  = os.getenv("WEBAPP_URL", "")
 SERVER_PORT = int(os.getenv("PORT", 3000))
 NODE_CWD    = Path(__file__).parent
+PING_PORT   = int(os.getenv("PING_PORT", 8080))   # порт для keep-alive пінгу
+SELF_URL    = os.getenv("SELF_URL", "")            # напр. https://your-app.onrender.com
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s — %(message)s",
@@ -374,6 +377,59 @@ async def error_handler(update: object, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     # Не піднімаємо — бот продовжує роботу
 
 # ─────────────────────────────────────────────
+# KEEP-ALIVE PING SERVER
+# Render безкоштовний tier засинає після 15 хв.
+# Цей мінімальний HTTP-сервер відповідає на GET /ping
+# щоб зовнішній сервіс (UptimeRobot / cron-job.org тощо)
+# міг тримати сервіс живим.
+# ─────────────────────────────────────────────
+async def handle_ping(request: web.Request) -> web.Response:
+    """GET /ping → 200 OK. Використовується для keep-alive."""
+    return web.Response(
+        text='{"status":"ok","service":"mafia-bot"}',
+        content_type="application/json",
+    )
+
+async def handle_health(request: web.Request) -> web.Response:
+    """GET /health → статус сервісів."""
+    node_alive = _node_process is not None and _node_process.poll() is None
+    return web.Response(
+        text=f'{{"status":"ok","node":{str(node_alive).lower()}}}',
+        content_type="application/json",
+        status=200 if node_alive else 503,
+    )
+
+async def start_ping_server() -> web.AppRunner:
+    app = web.Application()
+    app.router.add_get("/ping",   handle_ping)
+    app.router.add_get("/health", handle_health)
+    app.router.add_get("/",       handle_ping)   # fallback для Render health check
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", PING_PORT)
+    await site.start()
+    log.info(f"🌐 Ping-сервер запущено на порту {PING_PORT}  (GET /ping)")
+    return runner
+
+async def self_ping_loop() -> None:
+    """Пінгує сам себе кожні 14 хв щоб Render не засипав."""
+    if not SELF_URL:
+        log.info("ℹ️  SELF_URL не задано — само-пінг вимкнено")
+        return
+    import aiohttp as _aio
+    url = SELF_URL.rstrip("/") + "/ping"
+    log.info(f"🔁 Само-пінг активний: {url} кожні 14 хв")
+    await asyncio.sleep(60)  # перший пінг через 1 хв після старту
+    while True:
+        try:
+            async with _aio.ClientSession() as session:
+                async with session.get(url, timeout=_aio.ClientTimeout(total=10)) as r:
+                    log.debug(f"self-ping → {r.status}")
+        except Exception as e:
+            log.warning(f"self-ping failed: {e}")
+        await asyncio.sleep(14 * 60)  # 14 хвилин
+
+# ─────────────────────────────────────────────
 # NODE.JS УПРАВЛІННЯ
 # ─────────────────────────────────────────────
 _node_process: subprocess.Popen | None = None
@@ -457,6 +513,10 @@ async def main_async():
         BotCommand("help",  "📖 Як грати"),
     ])
 
+    # 3. Keep-alive ping сервер
+    ping_runner = await start_ping_server()
+    asyncio.create_task(self_ping_loop())
+
     await app.start()
     await app.updater.start_polling(
         allowed_updates=Update.ALL_TYPES,
@@ -475,6 +535,10 @@ async def main_async():
         await app.stop()
         await app.shutdown()
         stop_node_server(_node_process)
+        try:
+            await ping_runner.cleanup()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
