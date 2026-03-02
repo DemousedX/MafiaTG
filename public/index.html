@@ -18,18 +18,10 @@
   --sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px);
 }
 html,body{height:100%;height:100dvh;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{
-  overscroll-behavior:none;
-  touch-action:pan-y;
-}
+body{overscroll-behavior:none;touch-action:pan-y;}
 
 body::before{
-  content:"";
-  position:fixed;
-  inset:-120px;          /* запас, щоб кульки не різались */
-  pointer-events:none;
-  z-index:0;
-
+  content:"";position:fixed;inset:-120px;pointer-events:none;z-index:0;
   background:
     radial-gradient(ellipse 120% 70% at 50% -10%, rgba(80,30,160,.6) 0%, transparent 70%),
     radial-gradient(ellipse 70% 55% at 85% 90%, rgba(30,60,160,.22) 0%, transparent 60%),
@@ -39,56 +31,73 @@ input,textarea{user-select:text;-webkit-user-select:text}
 button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 *{scrollbar-width:none}*::-webkit-scrollbar{display:none}
 
+/* ═══ RIPPLE ═══════════════════════════════════ */
+.btn{position:relative;overflow:hidden;}
+.ripple{position:absolute;border-radius:50%;transform:scale(0);background:rgba(255,255,255,.25);animation:rippleAnim .55s linear;pointer-events:none;}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+
+/* ═══ HOME PARTICLES ════════════════════════════ */
+#homeParticles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.hpar{position:absolute;border-radius:50%;background:rgba(180,140,255,.6);animation:hparFloat linear infinite;will-change:transform,opacity}
+@keyframes hparFloat{
+  0%{transform:translateY(0) scale(1);opacity:0}
+  10%{opacity:1}
+  90%{opacity:.6}
+  100%{transform:translateY(-100vh) scale(.4);opacity:0}
+}
+
 /* ═══ SCREENS ═══════════════════════════════════ */
 .screen{
-  position:fixed;
-  inset:0;
-
-  /* ✅ safe-area + нормальні відступи */
+  position:fixed;inset:0;
   box-sizing:border-box;
   padding:calc(24px + var(--st)) 18px calc(24px + var(--sb));
-
-  display:flex;
-  flex-direction:column;
-
+  display:flex;flex-direction:column;
   opacity:0;
-  transform:translateY(24px) scale(.98);
+  transform:translateY(28px) scale(.97);
+  filter:blur(4px);
   pointer-events:none;
-
-  transition:opacity .55s var(--smooth),transform .55s var(--smooth);
-  will-change:opacity,transform;
-  z-index:1;
+  transition:opacity .5s var(--smooth),transform .5s var(--smooth),filter .5s var(--smooth);
+  will-change:opacity,transform,filter;z-index:1;
 }
-.screen.active{opacity:1;transform:none;pointer-events:all}
+.screen.active{opacity:1;transform:none;filter:blur(0);pointer-events:all}
+.screen.exit{opacity:0;transform:translateY(-16px) scale(1.02);filter:blur(6px);}
 
 /* ═══ HOME ══════════════════════════════════════ */
 #sc-home{
-  position:relative;
-  background:transparent;
-
-  align-items:center;
-  justify-content:flex-start;   /* ← змінити */
-
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-
+  position:relative;background:transparent;
+  align-items:center;justify-content:flex-start;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:calc(24px + var(--st)) 24px calc(32px + var(--sb));
 }
-
 #sc-home>*{position:relative;z-index:1}
 .home-logo{text-align:center;margin-bottom:20px}
 .logo-wrap{position:relative;display:inline-block}
 .logo-emoji{font-size:82px;display:block;animation:floatLogo 4s ease-in-out infinite;filter:drop-shadow(0 0 28px rgba(140,70,255,.75))}
 .logo-ring{position:absolute;inset:-16px;border-radius:50%;background:radial-gradient(circle,rgba(120,80,220,.28) 0%,transparent 70%);animation:ringPulse 4s ease-in-out infinite;pointer-events:none}
+/* Extra outer glow ring */
+.logo-ring2{position:absolute;inset:-32px;border-radius:50%;border:1px solid rgba(160,100,255,.2);animation:ringPulse2 4s ease-in-out infinite 1s;pointer-events:none}
 @keyframes ringPulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.18);opacity:1}}
-.home-logo h1{font-family:'Cinzel',serif;font-size:36px;font-weight:900;letter-spacing:10px;text-transform:uppercase;margin-top:10px;
+@keyframes ringPulse2{0%,100%{transform:scale(1);opacity:.2}50%{transform:scale(1.3);opacity:.5}}
+.home-logo h1{
+  font-family:'Cinzel',serif;font-size:36px;font-weight:900;letter-spacing:10px;text-transform:uppercase;margin-top:10px;
   background:linear-gradient(160deg,#f0e8ff 0%,#c8a0ff 45%,#7848d0 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmerText 3s ease-in-out infinite;
+}
+@keyframes shimmerText{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.2) drop-shadow(0 0 8px rgba(180,140,255,.5))}
+}
 .home-logo p{color:var(--text3);font-size:12px;margin-top:5px;letter-spacing:2.5px;text-transform:uppercase}
 @keyframes floatLogo{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-11px) rotate(1.5deg)}}
 .home-roles{display:flex;justify-content:center;gap:18px;margin-bottom:22px}
 .hrp{display:flex;flex-direction:column;align-items:center;gap:5px}
-.hrp-ic{font-size:26px;line-height:1}
+.hrp-ic{font-size:26px;line-height:1;animation:roleFloat 3s ease-in-out infinite}
+.hrp:nth-child(1) .hrp-ic{animation-delay:0s}
+.hrp:nth-child(2) .hrp-ic{animation-delay:.4s}
+.hrp:nth-child(3) .hrp-ic{animation-delay:.8s}
+.hrp:nth-child(4) .hrp-ic{animation-delay:1.2s}
+@keyframes roleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .hrp-lb{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
 .tg-preview{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:10px 14px;margin-bottom:6px;width:100%;max-width:360px}
 .tg-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
@@ -96,43 +105,50 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .tg-info{flex:1;min-width:0}.tg-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px}.tg-sub{font-size:11px;color:var(--text3)}
 .tg-check{color:#4fc3f7;font-size:12px;line-height:1}
 .edit-btn{font-size:11px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:8px;padding:4px 9px;flex-shrink:0}
-.home-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px}
+.home-card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px;animation:cardIn .7s var(--spring) both .2s}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
 .ig{display:flex;flex-direction:column;gap:6px}
 .il{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2)}
-.ifield{background:var(--card2);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;font-size:16px;font-family:'DM Sans',sans-serif;color:var(--text);width:100%;transition:border-color .2s;-webkit-appearance:none}
-.ifield:focus{outline:none;border-color:var(--purple)}.ifield::placeholder{color:var(--text3)}
+.ifield{background:var(--card2);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;font-size:16px;font-family:'DM Sans',sans-serif;color:var(--text);width:100%;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none}
+.ifield:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(128,90,213,.15)}.ifield::placeholder{color:var(--text3)}
 .divider{display:flex;align-items:center;gap:12px;color:var(--text3);font-size:12px}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .join-row{display:flex;gap:10px}.join-row .ifield{flex:1;letter-spacing:3px;font-size:18px;font-family:'Cinzel',serif}
 
 /* ═══ BUTTONS ══════════════════════════════════ */
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;transition:transform .15s var(--spring),opacity .15s;width:100%}
-.btn:active{transform:scale(.96);opacity:.8}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 20px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;transition:transform .15s var(--spring),opacity .15s,box-shadow .2s;width:100%}
+.btn:active{transform:scale(.95);opacity:.85}
 .btn-primary{background:linear-gradient(135deg,var(--purple),#6b46c1);color:#fff;box-shadow:0 4px 20px rgba(128,90,213,.4)}
+.btn-primary:hover{box-shadow:0 6px 28px rgba(128,90,213,.6)}
 .btn-danger{background:linear-gradient(135deg,var(--red),#c53030);color:#fff;box-shadow:0 4px 20px rgba(229,62,62,.4)}
+.btn-danger:hover{box-shadow:0 6px 28px rgba(229,62,62,.6)}
 .btn-ghost{background:var(--card2);border:1.5px solid var(--border);color:var(--text2)}
 .btn-sm{padding:10px 16px;font-size:13px;border-radius:10px}
 
 /* ═══ LOBBY ════════════════════════════════════ */
 #sc-lobby{background:var(--bg);overflow:hidden}
 .lobby-header{padding:20px 20px 0;display:flex;flex-direction:column;gap:14px}
-.lobby-code-block{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;text-align:center;cursor:pointer;transition:background .2s,transform .15s var(--spring);position:relative}
+.lobby-code-block{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;text-align:center;cursor:pointer;transition:background .2s,transform .15s var(--spring),box-shadow .3s;position:relative;overflow:hidden}
+.lobby-code-block::after{content:'';position:absolute;inset:0;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.04),transparent);pointer-events:none}
 .lobby-code-block:active{transform:scale(.98);background:var(--card2)}
+.lobby-code-block:hover{box-shadow:0 4px 20px rgba(246,194,85,.1)}
 .lobby-code-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
-.lobby-code{font-family:'Cinzel',serif;font-size:42px;font-weight:700;letter-spacing:10px;color:var(--gold2);text-shadow:0 0 30px rgba(246,194,85,.4)}
+.lobby-code{font-family:'Cinzel',serif;font-size:42px;font-weight:700;letter-spacing:10px;color:var(--gold2);text-shadow:0 0 30px rgba(246,194,85,.4);animation:codeGlow 2s ease-in-out infinite}
+@keyframes codeGlow{0%,100%{text-shadow:0 0 20px rgba(246,194,85,.3)}50%{text-shadow:0 0 40px rgba(246,194,85,.7),0 0 70px rgba(246,194,85,.2)}}
 .lobby-sub{font-size:12px;color:var(--text3);margin-top:4px}
 .copy-hint{font-size:11px;color:var(--purple);margin-top:4px;opacity:.7}
 .lobby-ph{display:flex;align-items:center;justify-content:space-between;padding:0 20px}
 .lobby-ph span{font-size:13px;color:var(--text2);font-weight:500}
 .lobby-players{flex:1;overflow-y:auto;padding:8px 20px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
 .player-row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:10px 14px;border:1px solid var(--border);animation:slideInRow .45s var(--spring)}
-@keyframes slideInRow{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+@keyframes slideInRow{from{opacity:0;transform:translateX(-16px) scale(.96)}to{opacity:1;transform:none}}
 .pav{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--purple),var(--blue))}
 .pav img{width:100%;height:100%;object-fit:cover}
 .pn{font-weight:600;font-size:15px;display:flex;align-items:center;gap:4px;flex:1;min-width:0;flex-wrap:wrap}
 .pbadge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:rgba(214,158,46,.15);color:var(--gold2);letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
-.pdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0}
-.pdot.off{background:var(--text3);box-shadow:none}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;animation:dotPulse 2s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{box-shadow:0 0 6px var(--green)}50%{box-shadow:0 0 12px var(--green),0 0 20px rgba(56,161,105,.4)}}
+.pdot.off{background:var(--text3);box-shadow:none;animation:none}
 .lobby-actions{padding:14px 20px calc(14px + var(--sb));display:flex;flex-direction:column;gap:10px}
 
 /* Share menu */
@@ -151,12 +167,14 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .topbar-left{display:flex;flex-direction:column;min-width:0}
 .t-phase{font-family:'Cinzel',serif;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text2)}
 .t-night{font-size:11px;color:var(--text3)}
-.t-timer{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--text);min-width:42px;text-align:center;flex-shrink:0}
-.t-timer.urgent{color:var(--red2);animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.role-pill{display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;cursor:pointer;flex-shrink:0;transition:background .2s,transform .15s var(--spring)}
+.t-timer{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--text);min-width:42px;text-align:center;flex-shrink:0;transition:color .3s}
+.t-timer.urgent{color:var(--red2);animation:timerPulse 1s infinite}
+@keyframes timerPulse{0%,100%{opacity:1;text-shadow:0 0 10px rgba(255,107,107,.5)}50%{opacity:.5;text-shadow:none}}
+.role-pill{display:none;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;padding:6px 12px 6px 8px;cursor:pointer;flex-shrink:0;transition:background .2s,transform .15s var(--spring),box-shadow .2s}
 .role-pill:active{transform:scale(.94);background:rgba(255,255,255,.1)}
-.role-pill.on{display:flex}.role-pill.dead{opacity:.6}
+.role-pill.on{display:flex}
+.role-pill.on:hover{box-shadow:0 2px 12px rgba(128,90,213,.3)}
+.role-pill.dead{opacity:.6}
 .rp-ic{font-size:18px}.rp-lbl{font-size:11px;color:var(--text3);line-height:1.2}.rp-hint{font-size:9px;color:var(--text3)}
 
 /* ═══ CINEMATIC OVERLAY ════════════════════════ */
@@ -165,14 +183,20 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .cinema-content{text-align:center;padding:24px;transition:opacity .45s ease,transform .45s var(--smooth)}
 .cinema-content.out{opacity:0;transform:translateY(-14px) scale(.97)}
 .cinema-content.in{opacity:1;transform:none}
-.cin-icon{font-size:80px;display:block;margin-bottom:16px;animation:cinFloat 2.5s ease-in-out infinite;filter:drop-shadow(0 0 20px currentColor)}
-@keyframes cinFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.04)}}
-.cin-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:3px;color:var(--text);line-height:1.3}
-.cin-sub{font-size:14px;color:var(--text2);margin-top:8px;font-style:italic}
+.cin-icon{font-size:80px;display:block;margin-bottom:16px;animation:cinFloat 2.5s ease-in-out infinite;filter:drop-shadow(0 0 24px currentColor)}
+@keyframes cinFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-12px) scale(1.06)}}
+/* Enhanced cinematic title with letter-by-letter animation */
+.cin-title{
+  font-family:'Cinzel',serif;font-size:22px;font-weight:700;letter-spacing:3px;color:var(--text);line-height:1.3;
+  animation:titleReveal .6s var(--spring) both;
+}
+@keyframes titleReveal{from{opacity:0;transform:translateY(12px) scale(.95);letter-spacing:6px}to{opacity:1;transform:none;letter-spacing:3px}}
+.cin-sub{font-size:14px;color:var(--text2);margin-top:8px;font-style:italic;animation:subFade .7s ease both .2s;opacity:0}
+@keyframes subFade{to{opacity:1}}
 .cin-progress{display:flex;gap:6px;margin-top:28px;justify-content:center}
-.cin-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .3s}
-.cin-dot.active{background:rgba(255,255,255,.8)}
-/* Parallax stars for cinematic */
+.cin-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .3s,transform .3s var(--spring)}
+.cin-dot.active{background:rgba(255,255,255,.8);transform:scale(1.4)}
+/* Parallax stars canvas */
 .cin-stars{position:absolute;inset:0;z-index:-1;pointer-events:none}
 
 /* ═══ NIGHT ════════════════════════════════════ */
@@ -180,20 +204,22 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .night-bg{flex:1;background:radial-gradient(ellipse at 50% -10%,#1a0a35 0%,#050510 60%);display:flex;flex-direction:column;align-items:center;overflow:hidden;position:relative}
 .stars-canvas{position:absolute;inset:0;z-index:0}
 .night-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;flex:1}
-.night-role-label{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:3px;margin:14px 0 2px}
+.night-role-label{font-family:'Cinzel',serif;font-size:15px;font-weight:700;letter-spacing:3px;margin:14px 0 2px;animation:labelGlow 2s ease-in-out infinite}
+@keyframes labelGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3) drop-shadow(0 0 8px currentColor)}}
 .night-sub{font-size:12px;color:var(--text3);margin-bottom:12px}
 .night-actions{width:100%;flex:1;display:flex;flex-direction:column;padding:0 14px 8px;gap:7px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.apc{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;transition:all .2s var(--spring);animation:su .3s var(--spring) both}
-.apc:nth-child(1){animation-delay:.04s}.apc:nth-child(2){animation-delay:.08s}.apc:nth-child(3){animation-delay:.12s}.apc:nth-child(4){animation-delay:.16s}.apc:nth-child(5){animation-delay:.2s}
-@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.apc{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.05);border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;transition:all .25s var(--spring),box-shadow .25s;animation:su .35s var(--spring) both}
+.apc:nth-child(1){animation-delay:.04s}.apc:nth-child(2){animation-delay:.09s}.apc:nth-child(3){animation-delay:.14s}.apc:nth-child(4){animation-delay:.19s}.apc:nth-child(5){animation-delay:.24s}
+@keyframes su{from{opacity:0;transform:translateY(18px) scale(.95)}to{opacity:1;transform:none}}
 .apc:active{transform:scale(.97)}
-.apc.sm{border-color:var(--red);background:rgba(229,62,62,.12);box-shadow:0 0 20px rgba(229,62,62,.2)}
-.apc.ss{border-color:var(--gold);background:rgba(214,158,46,.12)}
-.apc.sd{border-color:var(--green);background:rgba(56,161,105,.12)}
+.apc.sm{border-color:var(--red);background:rgba(229,62,62,.12);box-shadow:0 0 20px rgba(229,62,62,.25),0 0 40px rgba(229,62,62,.1)}
+.apc.ss{border-color:var(--gold);background:rgba(214,158,46,.12);box-shadow:0 0 20px rgba(214,158,46,.25)}
+.apc.sd{border-color:var(--green);background:rgba(56,161,105,.12);box-shadow:0 0 20px rgba(56,161,105,.25)}
 .apc-av{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;overflow:hidden;background:linear-gradient(135deg,var(--purple),#2d3748)}
 .apc-av img{width:100%;height:100%;object-fit:cover}
 .apc-name{font-weight:600;font-size:15px;flex:1;display:flex;align-items:center;gap:4px}
-.apc-chk{font-size:18px}
+.apc-chk{font-size:18px;transition:transform .3s var(--spring)}
+.apc.sm .apc-chk,.apc.ss .apc-chk,.apc.sd .apc-chk{transform:scale(1.3)}
 .night-sleep{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;color:var(--text3);text-align:center}
 .zzz{font-size:48px;animation:zzz 2s ease-in-out infinite}
 @keyframes zzz{0%,100%{transform:translateY(0) rotate(-5deg);opacity:.7}50%{transform:translateY(-8px) rotate(5deg);opacity:1}}
@@ -207,8 +233,8 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .dpc.dead .dav{background:#222;opacity:.4;filter:grayscale(1)}
 .dpc .dn{font-size:10px;color:var(--text3);max-width:46px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat-area{flex:1;overflow-y:auto;padding:6px 14px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
-.chat-msg{display:flex;flex-direction:column;max-width:80%;animation:msgIn .32s var(--spring)}
-@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.chat-msg{display:flex;flex-direction:column;max-width:80%;animation:msgIn .35s var(--spring)}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:none}}
 .chat-msg.mine{align-self:flex-end;align-items:flex-end}.chat-msg.theirs{align-self:flex-start}
 .chat-name{font-size:11px;color:var(--text3);margin-bottom:2px;padding:0 4px;display:flex;align-items:center;gap:3px}
 .chat-bubble{padding:9px 14px;border-radius:18px;font-size:14px;line-height:1.45;color:var(--text);max-width:100%;word-break:break-word}
@@ -219,8 +245,9 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .chat-bar{display:flex;gap:10px;padding:8px 14px calc(8px + var(--sb));border-top:1px solid var(--border);background:rgba(8,8,16,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-shrink:0}
 .chat-in{flex:1;background:var(--card2);border:1.5px solid var(--border);border-radius:24px;padding:10px 16px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);-webkit-appearance:none;resize:none;max-height:100px;outline:none;transition:border-color .2s}
 .chat-in:focus{border-color:var(--purple)}.chat-in::placeholder{color:var(--text3)}
-.send-btn{width:44px;height:44px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s var(--spring);align-self:flex-end}
+.send-btn{width:44px;height:44px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s var(--spring),box-shadow .2s;align-self:flex-end}
 .send-btn:active{transform:scale(.88)}
+.send-btn:hover{box-shadow:0 4px 16px rgba(128,90,213,.5)}
 
 /* ═══ VOTING ═══════════════════════════════════ */
 .vote-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);border-radius:28px 28px 0 0;padding:14px 14px calc(14px + var(--sb));z-index:50;transform:translateY(100%);transition:transform .55s var(--spring);max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -229,27 +256,28 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .v-title{font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--text2);text-align:center;margin-bottom:3px}
 .v-sub{font-size:12px;color:var(--text3);text-align:center;margin-bottom:14px}
 .v-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.vc{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:11px 14px;transition:all .2s var(--spring)}
+.vc{display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:11px 14px;transition:all .25s var(--spring)}
 .vc:active{transform:scale(.97)}
-.vc.von{border-color:var(--red);background:rgba(229,62,62,.1);box-shadow:0 0 16px rgba(229,62,62,.15)}
-.vc.myv{border-color:var(--gold);background:rgba(214,158,46,.1)}
+.vc.von{border-color:var(--red);background:rgba(229,62,62,.1);box-shadow:0 0 16px rgba(229,62,62,.2)}
+.vc.myv{border-color:var(--gold);background:rgba(214,158,46,.1);box-shadow:0 0 16px rgba(214,158,46,.15)}
 .v-av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;overflow:hidden}
 .v-av img{width:100%;height:100%;object-fit:cover}
 .v-name{font-weight:600;font-size:15px;flex:1;display:flex;align-items:center;gap:4px}
-.v-cnt{background:rgba(255,255,255,.08);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;color:var(--text2);min-width:26px;text-align:center}
-.v-cnt.hv{background:rgba(229,62,62,.2);color:var(--red2)}
+.v-cnt{background:rgba(255,255,255,.08);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;color:var(--text2);min-width:26px;text-align:center;transition:all .3s var(--spring)}
+.v-cnt.hv{background:rgba(229,62,62,.2);color:var(--red2);transform:scale(1.1)}
 
 /* ═══ GAME OVER ════════════════════════════════ */
 .go-view{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.win-banner{text-align:center;margin-bottom:24px;animation:bannerIn .6s var(--spring)}
-@keyframes bannerIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
-.win-emoji{font-size:72px;display:block;margin-bottom:10px}
+.win-banner{text-align:center;margin-bottom:24px;animation:bannerIn .7s var(--spring)}
+@keyframes bannerIn{from{opacity:0;transform:scale(.75) translateY(20px)}to{opacity:1;transform:none}}
+.win-emoji{font-size:72px;display:block;margin-bottom:10px;animation:winEmoji 1s var(--spring) both .2s}
+@keyframes winEmoji{from{opacity:0;transform:scale(0) rotate(-20deg)}to{opacity:1;transform:none}}
 .win-title{font-family:'Cinzel',serif;font-size:24px;font-weight:900;letter-spacing:4px}
 .win-sub{font-size:14px;color:var(--text2);margin-top:6px}
 .reveal-list{display:flex;flex-direction:column;gap:8px;width:100%;max-width:360px;margin-bottom:24px}
-.rc{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:11px 14px;border:1px solid var(--border);animation:rcIn .4s var(--spring) both}
+.rc{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:11px 14px;border:1px solid var(--border);animation:rcIn .45s var(--spring) both}
 .rc:nth-child(1){animation-delay:.1s}.rc:nth-child(2){animation-delay:.2s}.rc:nth-child(3){animation-delay:.3s}.rc:nth-child(4){animation-delay:.4s}.rc:nth-child(5){animation-delay:.5s}.rc:nth-child(6){animation-delay:.6s}
-@keyframes rcIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+@keyframes rcIn{from{opacity:0;transform:translateX(-16px) scale(.94)}to{opacity:1;transform:none}}
 .r-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;overflow:hidden}
 .r-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .r-name{flex:1;font-weight:600;display:flex;align-items:center;gap:4px}
@@ -260,48 +288,19 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .role-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
 .role-ov.open{opacity:1;pointer-events:all}
 .role-panel{
-  position:fixed;
-  top:calc(var(--st) + 10px);
-  left:10px;
-  right:10px;
-  z-index:201;
-  background:var(--surface);
-
-  /* щоб зверху не було "урізано" і виглядало як sheet */
-  border-radius:24px;
-
-  /* safe-area вже врахували через top, тому тут без var(--st) */
-  padding:16px 24px 32px;
-
+  position:fixed;top:calc(var(--st) + 10px);left:10px;right:10px;z-index:201;
+  background:var(--surface);border-radius:24px;padding:16px 24px 32px;
   transform:translateY(calc(-110% - var(--st)));
   transition:transform .6s var(--spring);
-
-  max-height:88vh;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-
+  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   border:1px solid rgba(255,255,255,.06);
 }
-.role-panel.open{ transform:none; }
-.role-close{
-  position:absolute;
-  top:12px;
-  right:12px;
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  background:var(--card2);
-  color:var(--text2);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:18px;
-  transition:transform .15s var(--spring)
-}
+.role-panel.open{transform:none;}
+.role-close{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:var(--card2);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:18px;transition:transform .15s var(--spring),background .2s}
 .role-close:active{transform:scale(.9)}
 .role-display{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;margin-top:8px}
 .role-emblem{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;border:3px solid;animation:ePulse 3s ease-in-out infinite}
-@keyframes ePulse{0%,100%{box-shadow:0 0 20px currentColor}50%{box-shadow:0 0 50px currentColor}}
+@keyframes ePulse{0%,100%{box-shadow:0 0 20px currentColor,0 0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 50px currentColor,0 0 60px rgba(255,255,255,.05)}}
 .role-rname{font-family:'Cinzel',serif;font-size:26px;font-weight:900;letter-spacing:4px}
 .role-desc{font-size:14px;color:var(--text2);line-height:1.6;max-width:280px}
 .role-dead{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:14px;padding:12px 20px;font-size:14px;color:var(--text3)}
@@ -328,40 +327,51 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 #sc-connect{align-items:center;justify-content:center;gap:16px}
 .cspin{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+
+/* Enhanced toast */
 .toast-wrap{position:fixed;top:calc(var(--st) + 56px);left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
-.toast{background:var(--card2);border:1px solid var(--border);border-radius:24px;padding:9px 18px;font-size:13px;color:var(--text);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:tIn .3s var(--spring)}
-@keyframes tIn{from{opacity:0;transform:translateY(-10px) scale(.9)}to{opacity:1;transform:none}}
-.toast.err{border-color:rgba(229,62,62,.5);color:var(--red2)}.toast.ok{border-color:rgba(56,161,105,.5);color:var(--green2)}
+.toast{
+  background:rgba(22,22,42,.95);
+  border:1px solid var(--border);
+  border-radius:24px;padding:9px 18px;font-size:13px;color:var(--text);
+  white-space:nowrap;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  animation:tIn .4s var(--spring);
+  transform-origin:top center;
+}
+@keyframes tIn{from{opacity:0;transform:translateY(-16px) scale(.8)}to{opacity:1;transform:none}}
+.toast.err{border-color:rgba(229,62,62,.5);color:var(--red2);background:rgba(229,62,62,.1);}
+.toast.ok{border-color:rgba(56,161,105,.5);color:var(--green2);background:rgba(56,161,105,.08);}
+
 .dev-mark{
-  margin-top:auto;                 /* ← головне */
-  text-align:center;
-  padding-top:24px;
-
-  font-size:11px;
-  letter-spacing:1.8px;
-  text-transform:uppercase;
-
-  color:rgba(232,232,255,.28);
-  cursor:pointer;
-
-  transition:opacity .2s ease, transform .15s var(--spring);
+  margin-top:auto;text-align:center;padding-top:24px;
+  font-size:11px;letter-spacing:1.8px;text-transform:uppercase;
+  color:rgba(232,232,255,.28);cursor:pointer;
+  transition:opacity .2s ease,transform .15s var(--spring),color .2s;
 }
+.dev-mark:active{transform:scale(.95);opacity:.6}
+.dev-mark:hover{color:rgba(232,232,255,.5)}
 
-.dev-mark:active{
-  transform:scale(.95);
-  opacity:.6;
-}
+/* ═══ SPARKLE EFFECT ═══════════════════════════ */
+.sparkle{position:fixed;pointer-events:none;z-index:9999;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%);animation:sparkleAnim .6s ease forwards}
+@keyframes sparkleAnim{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0)}}
+
+/* ═══ PHASE TRANSITION FLASH ════════════════════ */
+.phase-flash{position:fixed;inset:0;z-index:89;pointer-events:none;opacity:0;animation:phaseFlash .8s ease forwards}
+@keyframes phaseFlash{0%{opacity:.4}100%{opacity:0}}
 </style>
 </head>
 <body>
 
+<div id="homeParticles"></div>
 <div class="recon" id="recon"><div class="rspin"></div>Перепідключення…</div>
 
 <div id="sc-connect" class="screen active"><div class="cspin"></div><p style="color:var(--text2);font-size:14px">Підключення…</p></div>
 
 <div id="sc-home" class="screen">
   <div class="home-logo">
-    <div class="logo-wrap"><span class="logo-emoji">🎭</span><div class="logo-ring"></div></div>
+    <div class="logo-wrap"><span class="logo-emoji">🎭</span><div class="logo-ring"></div><div class="logo-ring2"></div></div>
     <h1>Мафія</h1>
     <p>Multiplayer · 4–20 гравців</p>
   </div>
@@ -506,8 +516,64 @@ const ROLES={
 };
 const RC={mafia:'#e53e3e',sheriff:'#d69e2e',doctor:'#38a169',civilian:'#4299e1'};
 
+// ══════════════════════════════════════════════
+// 🎆 RIPPLE EFFECT ON ALL BUTTONS
+// ══════════════════════════════════════════════
+document.addEventListener('pointerdown', e => {
+  const btn = e.target.closest('.btn, .share-btn, .lobby-code-block');
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  const size = Math.max(rect.width, rect.height) * 2;
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
+  btn.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
+});
+
+// ══════════════════════════════════════════════
+// ✨ SPARKLE BURST (for confirmations)
+// ══════════════════════════════════════════════
+function spawnSparkles(x, y, color='#c8a0ff', count=8){
+  for(let i=0;i<count;i++){
+    const el=document.createElement('div');
+    el.className='sparkle';
+    const angle=(i/count)*Math.PI*2;
+    const dist=40+Math.random()*40;
+    el.style.cssText=`left:${x}px;top:${y}px;background:${color};--dx:${Math.cos(angle)*dist}px;--dy:${Math.sin(angle)*dist}px;animation-delay:${Math.random()*.1}s`;
+    document.body.appendChild(el);
+    el.addEventListener('animationend',()=>el.remove());
+  }
+}
+
+// ══════════════════════════════════════════════
+// 🌠 HOME PARTICLES
+// ══════════════════════════════════════════════
+function initHomeParticles(){
+  const container=document.getElementById('homeParticles');
+  container.innerHTML='';
+  const colors=['rgba(180,140,255,.5)','rgba(100,180,255,.4)','rgba(255,180,100,.3)','rgba(100,255,180,.3)'];
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div');
+    p.className='hpar';
+    const size=2+Math.random()*5;
+    const dur=8+Math.random()*12;
+    const delay=Math.random()*dur;
+    p.style.cssText=`
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;
+      bottom:-10px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${dur}s;
+      animation-delay:-${delay}s;
+    `;
+    container.appendChild(p);
+  }
+}
+
 // ── TG USER ───────────────────────────────────
 function initTG(){
+  initHomeParticles();
   if(!TGU)return;
   const name=[TGU.first_name,TGU.last_name].filter(Boolean).join(' ').trim();
   S.name=name;S.avatarUrl=TGU.photo_url||'';S.tgVerified=!!TGU.is_premium;
@@ -557,73 +623,56 @@ function onMsg(m){
       document.getElementById('lobbyCode').textContent=m.code;
       saveS();
       if(!m.reconnecting){showScreen('sc-lobby');}
-      // else: wait for snapshot to decide correct screen
       break;
-
     case 'promoted_host':
       S.isHost=true;toast('👑 Ти тепер хост!','ok');
-      // Refresh game-over screen so host sees restart button
       if((S.phase==='game_over'||S.phase==='finished')&&S.lastGameOver){
         const w=S.lastGameOver.winner==='civilians'?S.myRole!=='mafia':S.myRole==='mafia';
         showGameOver(S.lastGameOver,w);}
       break;
     case 'room_restarted':onRoomRestarted();break;
-
     case 'left_room':
-      clearS();S.myId=null;S.code=null;
-      S.phase=null;
-      resetUI();showScreen('sc-home');break;
-
+      clearS();S.myId=null;S.code=null;S.phase=null;resetUI();showScreen('sc-home');break;
     case 'kicked':clearS();S.myId=null;S.code=null;toast('Тебе виключили 😔');resetUI();showScreen('sc-home');break;
     case 'error':toast(m.msg,'err');if(!S.myId)showScreen('sc-home');break;
     case 'player_joined':toast(`${m.name} приєднався! 👋`,'ok');vib(10);break;
     case 'player_disconnected':toast(`${m.name} відключився`);break;
     case 'player_reconnected':toast(`${m.name} повернувся! 👋`,'ok');break;
-
     case 'your_role':
       S.myRole=m.role;S.nightActed=false;updatePill(false);buildRoleCard();break;
-
     case 'mafia_team':
       S.mafiaTeam=m.team.filter(t=>t.id!==S.myId);buildRoleCard();break;
-
     case 'game_starting':
       S.phase='starting';S.mafiaTeam=[];S.sheriffLog=[];S.deadDismissed=false;
       vib([100,50,100]);
       document.getElementById('rolePill').classList.add('on');
       document.getElementById('deadOv').classList.remove('show');
       showScreen('sc-game');
-      // Невеликий delay щоб role прийшла перед кінематиком
       setTimeout(()=>{
         const role=S.myRole||'civilian';
         playCinematic(getIntroSlides(role),()=>{
-          // Нічого не робимо — сервер скоро надішле phase:night
           setPhase('🎭 ПОЧАТОК','Ролі роздано');
         });
       },300);
       break;
-
     case 'phase':onPhase(m);break;
     case 'tick':updTimer(m.time);break;
     case 'chat':appendMsg(m.message);break;
     case 'vote_update':if(S.phase==='voting')renderVotes(m.votes);break;
     case 'eliminated':toast(m.message);vib([200,100,200]);break;
     case 'no_elimination':toast(m.message);break;
-
     case 'sheriff_result':
       S.sheriffLog.unshift({name:m.name,isMafia:m.isMafia,night:S.snap?.night||1});
       buildRoleCard();
       toast(`🔍 ${m.name}: ${m.isMafia?'🔴 МАФІЯ!':'🟢 Мирний'}`,m.isMafia?'err':'ok');break;
-
     case 'night_acted':S.nightActed=true;break;
     case 'night_turn':onNightTurn(m);break;
     case 'game_over':onGameOver(m);break;
-
     case 'snapshot':{
       const wasAlive2=S.myAlive;
       const prevPhase=S.phase;
       S.snap=m;S.myAlive=m.myAlive;S.phase=m.phase;
       if(m.myRole&&m.myRole!==S.myRole){S.myRole=m.myRole;updatePill(false);buildRoleCard();}
-      // On first reconnect snapshot — route to correct screen
       if(S.myId&&!prevPhase&&m.phase!=='lobby'){
         showScreen('sc-game');
         document.getElementById('rolePill').classList.add('on');
@@ -637,9 +686,9 @@ function onMsg(m){
   }
 }
 
-// ═══════════════════════════════════════════════
-// CINEMATIC ENGINE
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// 🎬 CINEMATIC ENGINE (ENHANCED)
+// ══════════════════════════════════════════════
 let cinTimer=null;
 let cinStarsRAF=null;
 
@@ -662,9 +711,7 @@ const CIN_BG={
   transition:     'linear-gradient(180deg,#060610 0%,#040408 100%)',
 };
 
-// cinStarted: timestamp when cinematic began — used to guarantee minimum display
 let cinStarted=0, cinTotal=0;
-// cinOnDone: additional callback hook (for night_turn queueing)
 let cinOnDone=null;
 
 function playCinematic(slides, onDone){
@@ -681,7 +728,6 @@ function playCinematic(slides, onDone){
   let idx=0;
   function showSlide(){
     if(idx>=slides.length){
-      // Guarantee player sees at least min(1800ms, total) regardless of lag
       const elapsed=Date.now()-cinStarted;
       const minShow=Math.min(1800, cinTotal);
       const wait=Math.max(0, minShow-elapsed);
@@ -693,19 +739,29 @@ function playCinematic(slides, onDone){
       return;
     }
     const sl=slides[idx];
-    // Smooth background transition
     ov.style.transition='background 1.1s ease';
     ov.style.background=sl.bg||CIN_BG.night;
     ov.className='cinema show';
     prog.querySelectorAll('.cin-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
-    // Animate content: fade out → swap text → fade in
+
+    // Fade out content → reset → fade in with fresh animation
     content.style.cssText='opacity:0;transform:translateY(14px) scale(.95);transition:none';
     setTimeout(()=>{
-      document.getElementById('cinIcon').textContent=sl.icon||'🌙';
-      document.getElementById('cinTitle').textContent=sl.title||'';
-      document.getElementById('cinSub').textContent=sl.sub||'';
-      content.style.cssText='opacity:1;transform:none;transition:opacity .55s ease,transform .55s var(--smooth)';
-    },250);
+      // Force re-trigger animation by replacing elements
+      const icon=document.getElementById('cinIcon');
+      const title=document.getElementById('cinTitle');
+      const sub=document.getElementById('cinSub');
+      icon.textContent=sl.icon||'🌙';
+      title.textContent=sl.title||'';
+      sub.textContent=sl.sub||'';
+      // Re-trigger CSS animations
+      title.style.animation='none';
+      sub.style.animation='none';
+      void title.offsetWidth;
+      title.style.animation='';
+      sub.style.animation='';
+      content.style.cssText='opacity:1;transform:none;transition:opacity .5s ease,transform .5s var(--smooth)';
+    },220);
     idx++;
     cinTimer=setTimeout(showSlide, sl.dur||2000);
   }
@@ -724,34 +780,92 @@ function hideCinematic(){
   },650);
 }
 
+// ══════════════════════════════════════════════
+// 🌟 ENHANCED STAR CANVAS WITH SHOOTING STARS
+// ══════════════════════════════════════════════
 function startCinStars(){
   const cv=document.getElementById('cinStars');
-  const ov=document.getElementById('cinema');
   cv.width=window.innerWidth;cv.height=window.innerHeight;
   const ctx=cv.getContext('2d');
-  // Static stars
-  ctx.clearRect(0,0,cv.width,cv.height);
-  const staticS=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.2+.2,a:Math.random()*.7+.1}));
-  staticS.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,240,${s.a})`;ctx.fill();});
-  // Twinkling
-  const tw=Array.from({length:15},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*2+.5,sp:Math.random()*.02+.005,off:Math.random()*Math.PI*2}));
+
+  // Static background stars
+  const staticS=Array.from({length:140},()=>({
+    x:Math.random()*cv.width,y:Math.random()*cv.height,
+    r:Math.random()*1.3+.15,a:Math.random()*.7+.1
+  }));
+  staticS.forEach(s=>{
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,240,${s.a})`;ctx.fill();
+  });
+
+  // Twinkling stars
+  const tw=Array.from({length:20},()=>({
+    x:Math.random()*cv.width,y:Math.random()*cv.height,
+    r:Math.random()*2+.5,sp:Math.random()*.025+.005,off:Math.random()*Math.PI*2
+  }));
+
+  // Shooting stars state
+  const shooters=[];
+  function spawnShooter(){
+    if(shooters.length>3) return;
+    shooters.push({
+      x:Math.random()*cv.width*.8,y:Math.random()*cv.height*.4,
+      vx:3+Math.random()*5,vy:1.5+Math.random()*3,
+      len:60+Math.random()*80,life:1,alpha:0,growing:true,
+      r:Math.random()>.5?'rgba(200,180,255,':'rgba(255,240,200,'
+    });
+  }
+  // Spawn shooting star occasionally
+  let shooterTimer=setInterval(()=>{
+    if(document.getElementById('cinema').classList.contains('show'))spawnShooter();
+    else clearInterval(shooterTimer);
+  },2200+Math.random()*1500);
+
   let f=0;
   function tick(){
     if(!document.getElementById('cinema').classList.contains('show')){return;}
     f++;
+    // Clear twinkling area (partial clear is enough)
+    ctx.globalCompositeOperation='source-over';
+
+    // Redraw twinkling stars
     tw.forEach(s=>{
+      // Erase old
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r+1,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,0,0,0)';
+      // Just redraw with new alpha
+      const brightness=((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1;
       ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(255,230,100,${((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1})`;
-      ctx.fill();
+      ctx.fillStyle=`rgba(255,230,100,${brightness})`;ctx.fill();
     });
+
+    // Draw shooting stars
+    for(let i=shooters.length-1;i>=0;i--){
+      const sh=shooters[i];
+      sh.x+=sh.vx;sh.y+=sh.vy;
+      if(sh.growing){sh.alpha=Math.min(1,sh.alpha+.08);}
+      else{sh.alpha=Math.max(0,sh.alpha-.05);}
+      sh.life-=.012;
+      if(sh.alpha>=.8&&sh.growing)sh.growing=false;
+      if(sh.life<=0||sh.x>cv.width+100||sh.y>cv.height+100){shooters.splice(i,1);continue;}
+      // Draw trail
+      const grad=ctx.createLinearGradient(sh.x,sh.y,sh.x-sh.vx*(sh.len/sh.vx||10),sh.y-sh.vy*(sh.len/sh.vy||10));
+      grad.addColorStop(0,`${sh.r}${sh.alpha*.9})`);
+      grad.addColorStop(1,`${sh.r}0)`);
+      ctx.beginPath();
+      ctx.moveTo(sh.x,sh.y);
+      ctx.lineTo(sh.x-sh.vx*(sh.len/sh.vx||10),sh.y-sh.vy*(sh.len/sh.vy||10));
+      ctx.strokeStyle=grad;ctx.lineWidth=sh.alpha*2;ctx.stroke();
+      // Star head
+      ctx.beginPath();ctx.arc(sh.x,sh.y,sh.alpha*2.5,0,Math.PI*2);
+      ctx.fillStyle=`${sh.r}${sh.alpha})`;ctx.fill();
+    }
     cinStarsRAF=requestAnimationFrame(tick);
   }
   cinStarsRAF=requestAnimationFrame(tick);
 }
 
 // ── CINEMATIC SEQUENCES ──────────────────────
-
-// 🎭 ВСТУП — розкриття ролі після старту гри
 function getIntroSlides(role){
   const REVEAL={
     mafia:   {bg:CIN_BG.reveal_mafia,   icon:'🔫', title:'ТИ — МАФІЯ',   sub:'Знищуй місто з тіні. Ніхто не повинен дізнатись.'},
@@ -766,8 +880,6 @@ function getIntroSlides(role){
     {bg:CIN_BG.transition,   icon:'🌆', title:'Перша ніч вже близько...', sub:'Місто готується до темряви',                    dur:1800},
   ];
 }
-
-// 🌙 НІЧ — вступ (місто засинає)
 function getNightIntroSlides(night){
   return[
     {bg:CIN_BG.sunset,  icon:'🌆', title:'Сонце заходить за обрій...',  sub:`Ніч ${night} опускається на місто`,             dur:2000},
@@ -775,8 +887,6 @@ function getNightIntroSlides(night){
     {bg:CIN_BG.sleep,   icon:'🏘️', title:'Місто поступово засинає...',  sub:'Мирні жителі не підозрюють про небезпеку',       dur:1800},
   ];
 }
-
-// 🎬 Пробудження ролі (перший хід або після переходу)
 function getRoleWakeSlides(role){
   const WAKE={
     mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...',   sub:'Оберіть жертву цієї ночі'},
@@ -785,14 +895,10 @@ function getRoleWakeSlides(role){
   };
   return[WAKE[role]||{bg:CIN_BG.sleep,icon:'💤',title:'Місто спить...',sub:'',dur:1500}];
 }
-
-// 😴 Засинання після дії
 function getRoleSleepSlides(role){
   const txt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
   return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:1800}];
 }
-
-// 🔄 Перехід між ролями: [from засинає] → [to прокидається]
 function getTurnTransitionSlides(from, to){
   const sleepTxt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
   const wakeTxt ={mafia:'Мафія прокидається...',sheriff:'Прокидається шериф...',doctor:'Прокидається лікар...'};
@@ -804,13 +910,10 @@ function getTurnTransitionSlides(from, to){
                         title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:2000});
   return slides.length?slides:[{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1000}];
 }
-
-// Старий getNightSlides залишається для сумісності з reconnect
 function getNightSlides(role, night){
   if(!S.myAlive) return[...getNightIntroSlides(night),{bg:CIN_BG.sleep,icon:'👻',title:'Ти спостерігаєш...',sub:'Дух міста не спить',dur:1800}];
   return [...getNightIntroSlides(night)];
 }
-
 function getDawnSlides(log){
   const slides=[
     {bg:CIN_BG.dawn,   icon:'✨', title:'Ніч добігає кінця...', sub:'Місто чекає на світанок', dur:2000},
@@ -825,11 +928,8 @@ function getDawnSlides(log){
   slides.push({bg:CIN_BG.day, icon:'☀️', title:'Місто прокидається...', sub:'Час говорити та шукати правду', dur:1800});
   return slides;
 }
-
 function getDaySlides(){
-  return[
-    {bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:2000},
-  ];
+  return[{bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:2000}];
 }
 
 // ── PHASES ────────────────────────────────────
@@ -842,10 +942,8 @@ function onPhase(m){
     case 'night':
       setPhase('🌙 НІЧ',`Ніч ${m.night}`);
       vib([80,40,80]);
-      // Спочатку — місто засинає; потім очікуємо night_turn для пробудження ролі
       S.nightTurn=m.turn||null;
       playCinematic(getNightIntroSlides(m.night),()=>{
-        // Якщо вже знаємо чий хід — показуємо пробудження
         if(S.nightTurn){
           onNightTurnReady(null, S.nightTurn);
         } else {
@@ -869,13 +967,10 @@ function onPhase(m){
   }
 }
 
-// Обробка night_turn (перехід між ролями)
 function onNightTurn(m){
   S.nightTurn=m.to;
-  // Якщо кінематик ще грає — чекаємо (рідкий кейс при reconnect)
   const ov=document.getElementById('cinema');
   if(ov.classList.contains('show')){
-    // Відкладаємо до завершення поточного кінематика
     const prev=cinOnDone;
     cinOnDone=()=>{if(prev)prev();onNightTurnReady(m.from,m.to);};
     return;
@@ -883,24 +978,15 @@ function onNightTurn(m){
   onNightTurnReady(m.from,m.to);
 }
 
-// Показати перехід ролі + дію або сон
 function onNightTurnReady(from, to){
   const isMine=to===S.myRole;
   if(!S.myAlive){renderNightSleeping();return;}
   if(from){
-    // Перехідний кінематик: [from засинає] → [to прокидається якщо це моя роль]
-    if(isMine){
-      playCinematic(getTurnTransitionSlides(from,to),()=>renderNight());
-    } else {
-      playCinematic(getTurnTransitionSlides(from,null),()=>renderNightSleeping());
-    }
+    if(isMine){playCinematic(getTurnTransitionSlides(from,to),()=>renderNight());}
+    else{playCinematic(getTurnTransitionSlides(from,null),()=>renderNightSleeping());}
   } else {
-    // Перша роль ночі
-    if(isMine){
-      playCinematic(getRoleWakeSlides(to),()=>renderNight());
-    } else {
-      renderNightSleeping();
-    }
+    if(isMine){playCinematic(getRoleWakeSlides(to),()=>renderNight());}
+    else{renderNightSleeping();}
   }
 }
 
@@ -923,8 +1009,7 @@ function restoreGameFromSnap(snap){
     }
     return;
   }
-  updatePill(!snap.myAlive);
-  buildRoleCard();
+  updatePill(!snap.myAlive);buildRoleCard();
   switch(snap.phase){
     case 'night': setPhase('🌙 НІЧ',`Ніч ${snap.night||1}`); S.nightTurn=snap.nightTurn||null; renderNight(); break;
     case 'dawn':  setPhase('🌅 СВІТАНОК',''); renderDawn(snap.nightLog||[]); break;
@@ -978,17 +1063,12 @@ function renderNightSleeping(){
 
 function renderNight(){
   const snap=S.snap;const C=document.getElementById('phaseC');
-  // Якщо не моя черга, або вже відіграв, або мертвий/цивільний → спати
-  if(S.nightActed||!S.myAlive||S.myRole==='civilian'||S.nightTurn!==S.myRole){
-    renderNightSleeping();return;
-  }
+  if(S.nightActed||!S.myAlive||S.myRole==='civilian'||S.nightTurn!==S.myRole){renderNightSleeping();return;}
   const alive=snap?.players?.filter(p=>p.alive&&p.id!==S.myId)||[];
   const r=ROLES[S.myRole];
   const tc={mafia:'sm',sheriff:'ss',doctor:'sd'}[S.myRole];
   const lbl={mafia:'🎯 Оберіть жертву',sheriff:'🔍 Кого перевірити?',doctor:'💊 Кого врятувати?'}[S.myRole];
-  // Skip button text per role
   const skipTxt={mafia:'Пропустити вбивство',sheriff:'Пропустити перевірку',doctor:'Нікого не рятувати'}[S.myRole];
-
   C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
     <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
     <div class="night-content" style="width:100%">
@@ -1016,11 +1096,19 @@ function selTgt(id,cls,el){
   document.querySelectorAll('.apc').forEach(e=>{e.classList.remove('sm','ss','sd');e.querySelector('.apc-chk').textContent='';});
   el.classList.add(cls);el.querySelector('.apc-chk').textContent='✓';
   const b=document.getElementById('confBtn');if(b){b.disabled=false;b.style.opacity=1;}
+  // Spawn sparkles at tap point
+  const rect=el.getBoundingClientRect();
+  const colors={sm:'#ff6b6b',ss:'#f6c255',sd:'#68d391'};
+  spawnSparkles(rect.left+rect.width/2,rect.top+rect.height/2,colors[cls]||'#c8a0ff',6);
   vib(8);
 }
+
 function confNight(){
   if(!S.nightTarget)return;
   wsSend({type:'night_action',targetId:S.nightTarget});vib([50,30,50]);
+  // Sparkle burst on confirm button
+  const btn=document.getElementById('confBtn');
+  if(btn){const r=btn.getBoundingClientRect();spawnSparkles(r.left+r.width/2,r.top+r.height/2,'#ff6b6b',10);}
   playCinematic(getRoleSleepSlides(S.myRole),()=>renderNightSleeping());
 }
 function skipNight(){
@@ -1030,13 +1118,12 @@ function skipNight(){
 
 // ── DAWN ──────────────────────────────────────
 function renderDawn(log){
-  // Dawn is shown via cinematic, here just show the aftermath static view
   const C=document.getElementById('phaseC');
   C.innerHTML=`<div style="flex:1;background:linear-gradient(180deg,#1a0a08,#0f0a08);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:16px">
     <div style="font-size:56px;animation:sunRise 1s var(--spring) both">🌅</div>
     <style>@keyframes sunRise{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}</style>
     <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:4px;color:var(--gold2)">СВІТАНОК</div>
-    ${(log||[]).map(e=>`<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:12px 16px;width:100%;max-width:380px;animation:rcIn .4s var(--spring) both">
+    ${(log||[]).map((e,i)=>`<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:12px 16px;width:100%;max-width:380px;animation:rcIn .4s var(--spring) both;animation-delay:${.1+i*.12}s;opacity:0">
       <span style="font-size:22px">${e.emoji}</span><span style="font-size:14px;color:var(--text);line-height:1.4">${esc(e.text)}</span></div>`).join('')}
   </div>`;
 }
@@ -1092,7 +1179,11 @@ function renderVotes(votes){
   const cast=Object.keys(votes).length;
   const sub=document.getElementById('vSub');if(sub)sub.textContent=`Проголосували: ${cast}/${alive}`;
 }
-function doVote(id){if(!S.myAlive)return;S.myVote=id;wsSend({type:'vote',targetId:id});vib(10);renderVotes(S.snap?.votes||{});}
+function doVote(id){
+  if(!S.myAlive)return;
+  S.myVote=id;wsSend({type:'vote',targetId:id});vib(10);
+  renderVotes(S.snap?.votes||{});
+}
 document.getElementById('skipVote').addEventListener('click',()=>{S.myVote=null;wsSend({type:'vote',targetId:null});toast('Голосування пропущено');vib(5);});
 
 // ── GAME OVER ─────────────────────────────────
@@ -1103,7 +1194,6 @@ function onGameOver(m){
   closeRole();
   document.getElementById('rolePill').classList.remove('on');
   const win=m.winner==='civilians'?S.myRole!=='mafia':S.myRole==='mafia';
-  // Keep session so player can reconnect and see results + play again
   saveS();
   const icon=m.winner==='civilians'?'🕊️':'🔫';
   const title=m.winner==='civilians'?'Місто врятоване!':'Мафія захопила місто!';
@@ -1141,8 +1231,7 @@ function showGameOver(m,win){
 function updatePill(isDead){
   const pill=document.getElementById('rolePill');
   if(!S.myRole){pill.classList.remove('on');return;}
-  pill.classList.add('on');
-  pill.classList.toggle('dead',isDead);
+  pill.classList.add('on');pill.classList.toggle('dead',isDead);
   document.getElementById('rpIc').textContent=isDead?'💀':'🎭';
   document.getElementById('rpLbl').textContent=isDead?'Загинув':'Моя роль';
 }
@@ -1165,10 +1254,8 @@ function observe(){S.deadDismissed=true;document.getElementById('deadOv').classL
 
 // ── SHARE / CODE ──────────────────────────────
 function openShareMenu(){
-  const menu=document.getElementById('shareMenu');
-  // Show Telegram share only if bot is configured
   document.getElementById('shareTgBtn').style.display=S.botUsername?'flex':'none';
-  menu.classList.add('show');
+  document.getElementById('shareMenu').classList.add('show');
 }
 function closeShare(e){
   if(!e||e.target===document.getElementById('shareMenu')||e.currentTarget!==document.getElementById('shareMenu')){
@@ -1177,17 +1264,15 @@ function closeShare(e){
 }
 document.getElementById('shareCopyBtn').addEventListener('click',()=>{
   const code=S.code||document.getElementById('lobbyCode').textContent;
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(code).then(()=>toast('Код скопійовано! 📋','ok')).catch(()=>{fallbackCopy(code);});
-  } else {fallbackCopy(code);}
+  if(navigator.clipboard){navigator.clipboard.writeText(code).then(()=>toast('Код скопійовано! 📋','ok')).catch(()=>{fallbackCopy(code);});}
+  else{fallbackCopy(code);}
   document.getElementById('shareMenu').classList.remove('show');
 });
 document.getElementById('shareTgBtn').addEventListener('click',()=>{
-  const code=S.code;
-  if(!code||!S.botUsername)return;
+  const code=S.code;if(!code||!S.botUsername)return;
   const url=`https://t.me/${S.botUsername}?start=${code}`;
-  if(tg?.openTelegramLink){tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Заходь грати в Мафію! Код: '+code)}`);
-  } else {window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Грати в Мафію! Код: '+code)}`,'_blank');}
+  if(tg?.openTelegramLink){tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Заходь грати в Мафію! Код: '+code)}`);}
+  else{window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Грати в Мафію! Код: '+code)}`,'_blank');}
   document.getElementById('shareMenu').classList.remove('show');
 });
 function fallbackCopy(text){
@@ -1196,30 +1281,58 @@ function fallbackCopy(text){
   document.body.removeChild(el);
 }
 document.getElementById('codeBlock').addEventListener('click',()=>{
-  // If Telegram WebApp — show menu, otherwise just copy
   if(tg&&S.botUsername){openShareMenu();}
-  else{
-    const code=document.getElementById('lobbyCode').textContent;
-    fallbackCopy(code);
-  }
+  else{const code=document.getElementById('lobbyCode').textContent;fallbackCopy(code);}
 });
 
 // ── UI HELPERS ────────────────────────────────
-function setPhase(p,s){document.getElementById('tPhase').textContent=p;document.getElementById('tNight').textContent=s;}
-function updTimer(t){const el=document.getElementById('tTimer');if(!el)return;el.textContent=t;el.className='t-timer'+(t<=10?' urgent':'');}
+function setPhase(p,s){
+  const ph=document.getElementById('tPhase');
+  const ni=document.getElementById('tNight');
+  // Animate phase change
+  ph.style.cssText='opacity:0;transform:translateY(4px);transition:none';
+  ni.style.cssText='opacity:0;transition:none';
+  setTimeout(()=>{
+    ph.textContent=p;ni.textContent=s;
+    ph.style.cssText='opacity:1;transform:none;transition:opacity .3s ease,transform .3s var(--smooth)';
+    ni.style.cssText='opacity:1;transition:opacity .3s ease .05s';
+  },100);
+}
+
+function updTimer(t){
+  const el=document.getElementById('tTimer');if(!el)return;
+  // Bounce animation on each tick
+  el.style.animation='none';
+  void el.offsetWidth;
+  el.textContent=t;
+  el.className='t-timer'+(t<=10?' urgent':'');
+  if(t<=10&&t>0){
+    el.style.animation='timerBounce .2s var(--spring)';
+    if(!document.getElementById('timerBounceSt')){
+      const st=document.createElement('style');st.id='timerBounceSt';
+      st.textContent='@keyframes timerBounce{0%{transform:scale(1.3)}100%{transform:scale(1)}}';
+      document.head.appendChild(st);
+    }
+  }
+}
+
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>{
     const on=s.id===id;
     if(on&&!s.classList.contains('active')){
-      s.style.transform='translateY(18px) scale(.985)';
+      s.style.transform='translateY(22px) scale(.975)';
       s.style.opacity='0';
+      s.style.filter='blur(6px)';
       s.classList.add('active');
       requestAnimationFrame(()=>requestAnimationFrame(()=>{
-        s.style.transform='';s.style.opacity='';
+        s.style.transform='';s.style.opacity='';s.style.filter='';
       }));
-    } else if(!on){s.classList.remove('active');}
+    } else if(!on){
+      s.classList.remove('active');
+    }
   });
 }
+
 function resetUI(){
   S.myRole=null;S.myAlive=true;S.mafiaTeam=[];S.sheriffLog=[];
   S.deadDismissed=false;S.nightActed=false;S.nightTarget=null;
@@ -1232,47 +1345,82 @@ function backHome(){
   if(S.myId&&S.code)wsSend({type:'leave_room'});
   S.myId=null;S.code=null;S.phase=null;clearS();resetUI();showScreen('sc-home');
 }
-// ── GAME OVER ACTIONS ─────────────────────────
-function leaveGame(){
-  // працює з game-over екрану так само як звичайний вихід
-  backHome();
-}
-
+function leaveGame(){backHome();}
 function doRestartGame(){
-  if(!S.isHost){ toast('Лише хост може перезапустити гру','err'); return; }
-  toast('Перезапуск…');
-  wsSend({type:'restart_game'}); // це саме те, що очікує server.js
-  vib(15);
+  if(!S.isHost){toast('Лише хост може перезапустити гру','err');return;}
+  toast('Перезапуск…');wsSend({type:'restart_game'});vib(15);
 }
-
 function onRoomRestarted(){
-  // сервер повертає кімнату в lobby і надішле snapshot
-  S.phase='lobby';
-  S.lastGameOver=null;
-  resetUI();
-  showScreen('sc-lobby');
-  toast('Гру перезапущено. Збір гравців…','ok');
+  S.phase='lobby';S.lastGameOver=null;resetUI();showScreen('sc-lobby');toast('Гру перезапущено. Збір гравців…','ok');
 }
 function kick(id){wsSend({type:'kick',targetId:id});}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function toast(msg,type=''){const c=document.getElementById('toastWrap');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.style.cssText+='opacity:0;transform:translateY(-8px) scale(.9);transition:.3s';setTimeout(()=>t.remove(),300);},2800);}
+
+// Enhanced toast with auto-cleanup
+function toast(msg,type=''){
+  const c=document.getElementById('toastWrap');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);
+  setTimeout(()=>{
+    t.style.cssText+='opacity:0;transform:translateY(-10px) scale(.88);transition:all .35s ease';
+    setTimeout(()=>t.remove(),360);
+  },2800);
+}
 function vib(p){try{navigator.vibrate?.(p);}catch{}}
 
 function openDev(){
-  const url = "https://t.me/Demoused";
-  if (tg?.openTelegramLink) tg.openTelegramLink(url);
-  else window.open(url, "_blank");
+  const url="https://t.me/Demoused";
+  if(tg?.openTelegramLink)tg.openTelegramLink(url);
+  else window.open(url,"_blank");
   vib(10);
 }
 
-// ── STARS (for regular night view) ────────────
+// ── ENHANCED STARS (night view with shooting stars) ──
 function drawStars(id){
   const cv=document.getElementById(id);if(!cv)return;
   cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;
   const ctx=cv.getContext('2d');
-  for(let i=0;i<100;i++){ctx.beginPath();ctx.arc(Math.random()*cv.width,Math.random()*cv.height,Math.random()*1.4+.2,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,240,${Math.random()*.7+.2})`;ctx.fill();}
-  const tw=Array.from({length:12},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*2+.5,sp:Math.random()*.02+.005,off:Math.random()*Math.PI*2}));
-  let f=0;function tick(){f++;tw.forEach(s=>{ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,230,100,${((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1})`;ctx.fill();});requestAnimationFrame(tick);}tick();
+  // Background stars
+  for(let i=0;i<120;i++){
+    ctx.beginPath();
+    ctx.arc(Math.random()*cv.width,Math.random()*cv.height,Math.random()*1.4+.2,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,240,${Math.random()*.7+.2})`;ctx.fill();
+  }
+  // Twinkling + shooting stars
+  const tw=Array.from({length:15},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*2+.5,sp:Math.random()*.025+.005,off:Math.random()*Math.PI*2}));
+  let f=0;
+  let nextShoot=200+Math.floor(Math.random()*300);
+  const shooters=[];
+  function tick(){
+    f++;
+    // Twinkling
+    tw.forEach(s=>{
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      const b=((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1;
+      ctx.fillStyle=`rgba(255,230,100,${b})`;ctx.fill();
+    });
+    // Spawn shooting star occasionally
+    if(f===nextShoot){
+      nextShoot=f+200+Math.floor(Math.random()*400);
+      shooters.push({x:Math.random()*cv.width*.7,y:Math.random()*cv.height*.3,vx:4+Math.random()*4,vy:1.5+Math.random()*2.5,len:50+Math.random()*60,alpha:0,growing:true});
+    }
+    for(let i=shooters.length-1;i>=0;i--){
+      const sh=shooters[i];
+      sh.x+=sh.vx;sh.y+=sh.vy;
+      if(sh.growing){sh.alpha=Math.min(.9,sh.alpha+.1);}else{sh.alpha=Math.max(0,sh.alpha-.06);}
+      if(sh.alpha>=.85)sh.growing=false;
+      if(sh.alpha<=0||sh.x>cv.width){shooters.splice(i,1);continue;}
+      const grad=ctx.createLinearGradient(sh.x,sh.y,sh.x-sh.vx*10,sh.y-sh.vy*10);
+      grad.addColorStop(0,`rgba(220,200,255,${sh.alpha})`);
+      grad.addColorStop(1,'rgba(220,200,255,0)');
+      ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(sh.x-sh.vx*12,sh.y-sh.vy*12);
+      ctx.strokeStyle=grad;ctx.lineWidth=sh.alpha*2.5;ctx.stroke();
+      ctx.beginPath();ctx.arc(sh.x,sh.y,sh.alpha*2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(240,230,255,${sh.alpha})`;ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
 }
 
 // ── EVENTS ────────────────────────────────────
@@ -1297,13 +1445,10 @@ document.getElementById('leaveBtn').addEventListener('click',()=>{
 });
 document.getElementById('codeIn').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'').slice(0,5);});
 
-// ── DEEP LINK (start=CODE from bot) ───────────
+// ── DEEP LINK ─────────────────────────────────
 const startParam=tg?.initDataUnsafe?.start_param||new URLSearchParams(location.search).get('start');
 if(startParam&&/^\d{5}$/.test(startParam)){
-  // Auto-fill code field when loaded via bot link
-  document.addEventListener('DOMContentLoaded',()=>{
-    document.getElementById('codeIn').value=startParam;
-  });
+  document.addEventListener('DOMContentLoaded',()=>{document.getElementById('codeIn').value=startParam;});
   setTimeout(()=>{const ci=document.getElementById('codeIn');if(ci)ci.value=startParam;},500);
 }
 
