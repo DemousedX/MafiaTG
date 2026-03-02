@@ -880,32 +880,29 @@ function startCinStars(){
   const shooters=[];
   function spawnShooter(){
     if(shooters.length>3) return;
+    const vx=4+Math.random()*5;
+    const vy=1.5+Math.random()*2.5;
+    const color=Math.random()>.5?'rgba(200,180,255,':'rgba(255,240,200,';
     shooters.push({
-      x:Math.random()*cv.width*.8,y:Math.random()*cv.height*.4,
-      vx:3+Math.random()*5,vy:1.5+Math.random()*3,
-      len:60+Math.random()*80,life:1,alpha:0,growing:true,
-      r:Math.random()>.5?'rgba(200,180,255,':'rgba(255,240,200,'
+      x:Math.random()*cv.width*.7,y:Math.random()*cv.height*.4,
+      vx,vy,tailPx:65+Math.random()*70,
+      life:0,totalFrames:55+Math.floor(Math.random()*35),
+      color,
     });
   }
-  // Spawn shooting star occasionally
   let shooterTimer=setInterval(()=>{
     if(document.getElementById('cinema').classList.contains('show'))spawnShooter();
     else clearInterval(shooterTimer);
-  },2200+Math.random()*1500);
+  },2000+Math.random()*1400);
 
   let f=0;
   function tick(){
     if(!document.getElementById('cinema').classList.contains('show')){return;}
     f++;
-    // Clear twinkling area (partial clear is enough)
     ctx.globalCompositeOperation='source-over';
 
     // Redraw twinkling stars
     tw.forEach(s=>{
-      // Erase old
-      ctx.beginPath();ctx.arc(s.x,s.y,s.r+1,0,Math.PI*2);
-      ctx.fillStyle='rgba(0,0,0,0)';
-      // Just redraw with new alpha
       const brightness=((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1;
       ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
       ctx.fillStyle=`rgba(255,230,100,${brightness})`;ctx.fill();
@@ -915,22 +912,21 @@ function startCinStars(){
     for(let i=shooters.length-1;i>=0;i--){
       const sh=shooters[i];
       sh.x+=sh.vx;sh.y+=sh.vy;
-      if(sh.growing){sh.alpha=Math.min(1,sh.alpha+.08);}
-      else{sh.alpha=Math.max(0,sh.alpha-.05);}
-      sh.life-=.012;
-      if(sh.alpha>=.8&&sh.growing)sh.growing=false;
-      if(sh.life<=0||sh.x>cv.width+100||sh.y>cv.height+100){shooters.splice(i,1);continue;}
-      // Draw trail
-      const grad=ctx.createLinearGradient(sh.x,sh.y,sh.x-sh.vx*(sh.len/sh.vx||10),sh.y-sh.vy*(sh.len/sh.vy||10));
-      grad.addColorStop(0,`${sh.r}${sh.alpha*.9})`);
-      grad.addColorStop(1,`${sh.r}0)`);
-      ctx.beginPath();
-      ctx.moveTo(sh.x,sh.y);
-      ctx.lineTo(sh.x-sh.vx*(sh.len/sh.vx||10),sh.y-sh.vy*(sh.len/sh.vy||10));
-      ctx.strokeStyle=grad;ctx.lineWidth=sh.alpha*2;ctx.stroke();
-      // Star head
-      ctx.beginPath();ctx.arc(sh.x,sh.y,sh.alpha*2.5,0,Math.PI*2);
-      ctx.fillStyle=`${sh.r}${sh.alpha})`;ctx.fill();
+      sh.life++;
+      const progress=sh.life/sh.totalFrames;
+      if(progress>=1){shooters.splice(i,1);continue;}
+      // Alpha: fast in (first 15%), full fade out rest
+      const alpha=progress<.15?(progress/.15):(1-(progress-.15)/.85);
+      if(alpha<=0.01){shooters.splice(i,1);continue;}
+      const tailX=sh.x-sh.vx*(sh.tailPx/sh.vx);
+      const tailY=sh.y-sh.vy*(sh.tailPx/sh.vy);
+      const grad=ctx.createLinearGradient(sh.x,sh.y,tailX,tailY);
+      grad.addColorStop(0,`${sh.color}${alpha*.95})`);
+      grad.addColorStop(1,`${sh.color}0)`);
+      ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(tailX,tailY);
+      ctx.strokeStyle=grad;ctx.lineWidth=alpha*2.2;ctx.stroke();
+      ctx.beginPath();ctx.arc(sh.x,sh.y,alpha*2.5,0,Math.PI*2);
+      ctx.fillStyle=`${sh.color}${alpha})`;ctx.fill();
     }
     cinStarsRAF=requestAnimationFrame(tick);
   }
@@ -974,13 +970,14 @@ function getRoleSleepSlides(role){
 function getTurnTransitionSlides(from, to){
   const sleepTxt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
   const wakeTxt ={mafia:'Мафія прокидається...',sheriff:'Прокидається шериф...',doctor:'Прокидається лікар...'};
-  const wakeSub ={mafia:'Оберіть жертву цієї ночі',sheriff:'Час перевірити підозрюваного',doctor:'Хтось потребує захисту'};
+  const wakeSub ={mafia:'Мафія обирає свою жертву',sheriff:'Шериф іде на перевірку',doctor:'Лікар поспішає врятувати'};
   const wakeBg  ={mafia:CIN_BG.mafia,sheriff:CIN_BG.sheriff,doctor:CIN_BG.doctor};
+  const wakeIco ={mafia:'🔫',sheriff:'⭐',doctor:'💊'};
   const slides=[];
-  if(from) slides.push({bg:CIN_BG.sleep,   icon:'💤', title:sleepTxt[from]||'Засинає...',    sub:'', dur:2200});
-  if(to)   slides.push({bg:wakeBg[to]||CIN_BG.sleep, icon:{mafia:'🔫',sheriff:'⭐',doctor:'💊'}[to]||'💤',
+  if(from) slides.push({bg:CIN_BG.sleep, icon:'💤', title:sleepTxt[from]||'Засинає...', sub:'', dur:2200});
+  if(to)   slides.push({bg:wakeBg[to]||CIN_BG.sleep, icon:wakeIco[to]||'💤',
                         title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:2800});
-  return slides.length?slides:[{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1200}];
+  return slides.length ? slides : [{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1200}];
 }
 function getNightSlides(role, night){
   if(!S.myAlive) return[...getNightIntroSlides(night),{bg:CIN_BG.sleep,icon:'👻',title:'Ти спостерігаєш...',sub:'Дух міста не спить',dur:1800}];
@@ -1061,13 +1058,17 @@ function onNightTurn(m){
 
 function onNightTurnReady(from, to){
   const isMine=to===S.myRole;
-  if(!S.myAlive){renderNightSleeping();return;}
-  if(from){
-    if(isMine){playCinematic(getTurnTransitionSlides(from,to),()=>renderNight());}
-    else{playCinematic(getTurnTransitionSlides(from,null),()=>renderNightSleeping());}
+  if(!S.myAlive){
+    // Мертві теж бачать кінематик, але без UI дії
+    playCinematic(getTurnTransitionSlides(from,to),()=>renderNightSleeping());
+    return;
+  }
+  if(isMine){
+    // Моя черга — кінематик + UI дії
+    playCinematic(getTurnTransitionSlides(from,to),()=>renderNight());
   } else {
-    if(isMine){playCinematic(getRoleWakeSlides(to),()=>renderNight());}
-    else{renderNightSleeping();}
+    // Чужа роль — той самий кінематик для всіх, потім екран очікування
+    playCinematic(getTurnTransitionSlides(from,to),()=>renderNightSleeping());
   }
 }
 
@@ -1128,17 +1129,34 @@ function renderLobby(snap){
 // ── NIGHT ─────────────────────────────────────
 function renderNightSleeping(){
   const C=document.getElementById('phaseC');
-  const txt=!S.myAlive?'☠️ Ти загинув. Спостерігай.':
-    S.nightActed?'Дію виконано! Очікуємо інших…':
-    S.myRole==='civilian'?'Мирні спочивають вночі…':
-    'Зачекай свого ходу...';
-  const turnInfo=S.nightTurn?` <div style="font-size:12px;color:var(--text3);margin-top:8px">Зараз діє: ${{'mafia':'🔫 Мафія','sheriff':'⭐ Шериф','doctor':'💊 Лікар'}[S.nightTurn]||''}</div>`:'';
+
+  // Contextual text visible to everyone
+  const TURN_MSG={
+    mafia:   {icon:'🔫', color:'#e53e3e', main:'Мафія обирає свою жертву...', sub:'Місто тремтить у темряві'},
+    sheriff: {icon:'⭐', color:'#d69e2e', main:'Шериф вирушає на перевірку...', sub:'Закон не спить навіть вночі'},
+    doctor:  {icon:'💊', color:'#38a169', main:'Лікар поспішає врятувати когось...', sub:'Чиєсь життя у надійних руках'},
+  };
+  let mainTxt, subTxt, icon='🌙', color='rgba(200,180,255,.6)';
+  if(!S.myAlive){
+    mainTxt='Ти загинув. Спостерігай.'; subTxt=''; icon='☠️'; color='rgba(255,100,100,.4)';
+  } else if(S.nightActed){
+    mainTxt='Дію виконано!'; subTxt='Очікуємо інших гравців…'; icon='✅'; color='rgba(100,200,120,.5)';
+  } else if(S.nightTurn && TURN_MSG[S.nightTurn]){
+    const t=TURN_MSG[S.nightTurn];
+    mainTxt=t.main; subTxt=t.sub; icon=t.icon; color=t.color+'80';
+  } else {
+    mainTxt='Місто спить...'; subTxt='Вночі таємниці оживають'; icon='🌙';
+  }
+
   C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
-    <div class="night-content"><div style="font-size:52px;margin:16px 0 4px;filter:drop-shadow(0 0 20px rgba(200,180,255,.6));animation:moonGlow 3s ease-in-out infinite">🌙</div>
     <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
-    <div class="night-sleep"><div class="zzz">💤</div>
-    <div style="font-size:14px;color:var(--text2)">${txt}</div>${turnInfo}
-    </div></div></div>`;
+    <div class="night-content">
+      <div style="font-size:56px;margin:20px 0 6px;filter:drop-shadow(0 0 22px ${color});animation:moonGlow 3s ease-in-out infinite;transition:all .4s ease">${icon}</div>
+      <div class="night-sleep" style="gap:8px">
+        <div style="font-size:16px;font-weight:600;color:var(--text);text-align:center;line-height:1.4;animation:su .5s var(--spring) both">${mainTxt}</div>
+        ${subTxt?`<div style="font-size:13px;color:var(--text3);text-align:center;animation:su .5s var(--spring) both .08s">${subTxt}</div>`:''}
+      </div>
+    </div></div>`;
   drawStars('sc');
 }
 
@@ -1467,11 +1485,27 @@ function drawStars(id){
     ctx.arc(Math.random()*cv.width,Math.random()*cv.height,Math.random()*1.4+.2,0,Math.PI*2);
     ctx.fillStyle=`rgba(255,255,240,${Math.random()*.7+.2})`;ctx.fill();
   }
-  // Twinkling + shooting stars
+  // Twinkling stars
   const tw=Array.from({length:15},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*2+.5,sp:Math.random()*.025+.005,off:Math.random()*Math.PI*2}));
   let f=0;
-  let nextShoot=200+Math.floor(Math.random()*300);
+  let nextShoot=180+Math.floor(Math.random()*260);
   const shooters=[];
+
+  function spawnShooter(){
+    const vx=5+Math.random()*5;
+    const vy=2+Math.random()*2.5;
+    // total travel before fully faded = trailLen frames
+    const trailLen=55+Math.random()*40; // frames until gone
+    shooters.push({
+      x:Math.random()*cv.width*.65,
+      y:Math.random()*cv.height*.35,
+      vx,vy,
+      tailPx:60+Math.random()*60, // tail length in pixels
+      life:0,          // 0→1 progress
+      totalFrames:trailLen,
+    });
+  }
+
   function tick(){
     f++;
     // Twinkling
@@ -1480,24 +1514,34 @@ function drawStars(id){
       const b=((Math.sin(f*s.sp+s.off)+1)/2)*.9+.1;
       ctx.fillStyle=`rgba(255,230,100,${b})`;ctx.fill();
     });
-    // Spawn shooting star occasionally
+    // Spawn
     if(f===nextShoot){
-      nextShoot=f+200+Math.floor(Math.random()*400);
-      shooters.push({x:Math.random()*cv.width*.7,y:Math.random()*cv.height*.3,vx:4+Math.random()*4,vy:1.5+Math.random()*2.5,len:50+Math.random()*60,alpha:0,growing:true});
+      nextShoot=f+180+Math.floor(Math.random()*320);
+      spawnShooter();
     }
+    // Draw & advance shooters
     for(let i=shooters.length-1;i>=0;i--){
       const sh=shooters[i];
       sh.x+=sh.vx;sh.y+=sh.vy;
-      if(sh.growing){sh.alpha=Math.min(.9,sh.alpha+.1);}else{sh.alpha=Math.max(0,sh.alpha-.06);}
-      if(sh.alpha>=.85)sh.growing=false;
-      if(sh.alpha<=0||sh.x>cv.width){shooters.splice(i,1);continue;}
-      const grad=ctx.createLinearGradient(sh.x,sh.y,sh.x-sh.vx*10,sh.y-sh.vy*10);
-      grad.addColorStop(0,`rgba(220,200,255,${sh.alpha})`);
+      sh.life++;
+      const progress=sh.life/sh.totalFrames; // 0→1
+      if(progress>=1){shooters.splice(i,1);continue;}
+      // Alpha: quick fade-in (first 15%), then steady fade-out to 0
+      const alpha=progress<.15
+        ? progress/.15                  // 0→1 while progress 0→15%
+        : 1-(progress-.15)/.85;         // 1→0 while progress 15→100%
+      if(alpha<=0){shooters.splice(i,1);continue;}
+      // Trail
+      const tailX=sh.x-sh.vx*(sh.tailPx/sh.vx);
+      const tailY=sh.y-sh.vy*(sh.tailPx/sh.vy);
+      const grad=ctx.createLinearGradient(sh.x,sh.y,tailX,tailY);
+      grad.addColorStop(0,`rgba(220,200,255,${alpha})`);
       grad.addColorStop(1,'rgba(220,200,255,0)');
-      ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(sh.x-sh.vx*12,sh.y-sh.vy*12);
-      ctx.strokeStyle=grad;ctx.lineWidth=sh.alpha*2.5;ctx.stroke();
-      ctx.beginPath();ctx.arc(sh.x,sh.y,sh.alpha*2,0,Math.PI*2);
-      ctx.fillStyle=`rgba(240,230,255,${sh.alpha})`;ctx.fill();
+      ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(tailX,tailY);
+      ctx.strokeStyle=grad;ctx.lineWidth=alpha*2.2;ctx.stroke();
+      // Head glow
+      ctx.beginPath();ctx.arc(sh.x,sh.y,alpha*2.2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(240,225,255,${alpha*.9})`;ctx.fill();
     }
     requestAnimationFrame(tick);
   }
