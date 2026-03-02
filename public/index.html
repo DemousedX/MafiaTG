@@ -767,12 +767,17 @@ function playCinematic(slides, onDone){
   cinStarted=Date.now();
   cinTotal=slides.reduce((a,sl)=>a+(sl.dur||2000),0);
 
+  // Fade-out duration (ms) before each slide swap
+  const FADE_OUT=420;
+
   let idx=0;
   function showSlide(){
     if(idx>=slides.length){
       const elapsed=Date.now()-cinStarted;
-      const minShow=Math.min(1800, cinTotal);
+      const minShow=Math.min(2200, cinTotal);
       const wait=Math.max(0, minShow-elapsed);
+      // Smooth fade-out of current content before hiding
+      content.style.cssText=`opacity:0;transform:translateY(-10px) scale(.96);filter:blur(4px);transition:opacity ${FADE_OUT}ms ease,transform ${FADE_OUT}ms var(--smooth),filter ${FADE_OUT}ms ease`;
       setTimeout(()=>{
         hideCinematic();
         if(onDone)onDone();
@@ -801,21 +806,34 @@ function playCinematic(slides, onDone){
       aurora.style.background=tints[key]||tints.default;
     }
 
-    // Fade out → swap → fade in
-    content.style.cssText='opacity:0;transform:translateY(18px) scale(.93);filter:blur(5px);transition:none';
-    setTimeout(()=>{
+    // Fade out current content smoothly, then swap, then fade in
+    const doSwap=()=>{
       const icon=document.getElementById('cinIcon');
       const title=document.getElementById('cinTitle');
       const sub=document.getElementById('cinSub');
       icon.textContent=sl.icon||'🌙';
       title.textContent=sl.title||'';
       sub.textContent=sl.sub||'';
-      // Re-trigger CSS animations cleanly
       [title,sub].forEach(el=>{el.style.animation='none';void el.offsetWidth;el.style.animation='';});
-      content.style.cssText='opacity:1;transform:none;filter:blur(0);transition:opacity .65s ease,transform .65s var(--smooth),filter .65s ease';
-    },260);
+      content.style.cssText='opacity:1;transform:none;filter:blur(0);transition:opacity .7s ease,transform .7s var(--smooth),filter .7s ease';
+    };
+
+    if(idx===0){
+      // First slide: instant show (no previous content to fade out)
+      content.style.cssText='opacity:0;transform:translateY(18px) scale(.93);filter:blur(5px);transition:none';
+      setTimeout(doSwap, 60);
+    } else {
+      // Fade out previous slide content, then swap
+      content.style.cssText=`opacity:0;transform:translateY(-12px) scale(.96);filter:blur(4px);transition:opacity ${FADE_OUT}ms ease,transform ${FADE_OUT}ms var(--smooth),filter ${FADE_OUT}ms ease`;
+      setTimeout(()=>{
+        content.style.cssText='opacity:0;transform:translateY(18px) scale(.93);filter:blur(5px);transition:none';
+        setTimeout(doSwap, 40);
+      }, FADE_OUT);
+    }
+
     idx++;
-    cinTimer=setTimeout(showSlide, sl.dur||2000);
+    // Schedule next slide after full duration (dur already accounts for reading time)
+    cinTimer=setTimeout(showSlide, sl.dur||(idx===1?2500:2200));
   }
   showSlide();
 }
@@ -929,29 +947,29 @@ function getIntroSlides(role){
   };
   const rev=REVEAL[role]||REVEAL.civilian;
   return[
-    {bg:CIN_BG.intro,        icon:'🎭', title:'Ролі роздано!',           sub:'Прочитай свою роль уважно',                      dur:2000},
-    {bg:rev.bg,              icon:rev.icon, title:rev.title,             sub:rev.sub,                                          dur:3200},
-    {bg:CIN_BG.transition,   icon:'🌆', title:'Перша ніч вже близько...', sub:'Місто готується до темряви',                    dur:1800},
+    {bg:CIN_BG.intro,        icon:'🎭', title:'Ролі роздано!',           sub:'Прочитай свою роль уважно',                      dur:2400},
+    {bg:rev.bg,              icon:rev.icon, title:rev.title,             sub:rev.sub,                                          dur:4000},
+    {bg:CIN_BG.transition,   icon:'🌆', title:'Перша ніч вже близько...', sub:'Місто готується до темряви',                    dur:2400},
   ];
 }
 function getNightIntroSlides(night){
   return[
-    {bg:CIN_BG.sunset,  icon:'🌆', title:'Сонце заходить за обрій...',  sub:`Ніч ${night} опускається на місто`,             dur:2000},
-    {bg:CIN_BG.night,   icon:'🌙', title:'Настає темна ніч...',         sub:'Зірки запалюються одна за одною',                dur:1800},
-    {bg:CIN_BG.sleep,   icon:'🏘️', title:'Місто поступово засинає...',  sub:'Мирні жителі не підозрюють про небезпеку',       dur:1800},
+    {bg:CIN_BG.sunset,  icon:'🌆', title:'Сонце заходить за обрій...',  sub:`Ніч ${night} опускається на місто`,             dur:2600},
+    {bg:CIN_BG.night,   icon:'🌙', title:'Настає темна ніч...',         sub:'Зірки запалюються одна за одною',                dur:2400},
+    {bg:CIN_BG.sleep,   icon:'🏘️', title:'Місто поступово засинає...',  sub:'Мирні жителі не підозрюють про небезпеку',       dur:2400},
   ];
 }
 function getRoleWakeSlides(role){
   const WAKE={
-    mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...',   sub:'Оберіть жертву цієї ночі'},
-    sheriff: {bg:CIN_BG.sheriff, icon:'⭐', title:'Прокидається шериф...',   sub:'Час розкрити правду міста'},
-    doctor:  {bg:CIN_BG.doctor,  icon:'💊', title:'Прокидається лікар...',   sub:'Хтось потребує захисту сьогодні'},
+    mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...',   sub:'Оберіть жертву цієї ночі',   dur:2800},
+    sheriff: {bg:CIN_BG.sheriff, icon:'⭐', title:'Прокидається шериф...',   sub:'Час розкрити правду міста',   dur:2800},
+    doctor:  {bg:CIN_BG.doctor,  icon:'💊', title:'Прокидається лікар...',   sub:'Хтось потребує захисту сьогодні', dur:2800},
   };
-  return[WAKE[role]||{bg:CIN_BG.sleep,icon:'💤',title:'Місто спить...',sub:'',dur:1500}];
+  return[WAKE[role]||{bg:CIN_BG.sleep,icon:'💤',title:'Місто спить...',sub:'',dur:2000}];
 }
 function getRoleSleepSlides(role){
   const txt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
-  return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:1800}];
+  return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:2400}];
 }
 function getTurnTransitionSlides(from, to){
   const sleepTxt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
@@ -959,10 +977,10 @@ function getTurnTransitionSlides(from, to){
   const wakeSub ={mafia:'Оберіть жертву цієї ночі',sheriff:'Час перевірити підозрюваного',doctor:'Хтось потребує захисту'};
   const wakeBg  ={mafia:CIN_BG.mafia,sheriff:CIN_BG.sheriff,doctor:CIN_BG.doctor};
   const slides=[];
-  if(from) slides.push({bg:CIN_BG.sleep,   icon:'💤', title:sleepTxt[from]||'Засинає...',    sub:'', dur:1800});
+  if(from) slides.push({bg:CIN_BG.sleep,   icon:'💤', title:sleepTxt[from]||'Засинає...',    sub:'', dur:2200});
   if(to)   slides.push({bg:wakeBg[to]||CIN_BG.sleep, icon:{mafia:'🔫',sheriff:'⭐',doctor:'💊'}[to]||'💤',
-                        title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:2000});
-  return slides.length?slides:[{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1000}];
+                        title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:2800});
+  return slides.length?slides:[{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1200}];
 }
 function getNightSlides(role, night){
   if(!S.myAlive) return[...getNightIntroSlides(night),{bg:CIN_BG.sleep,icon:'👻',title:'Ти спостерігаєш...',sub:'Дух міста не спить',dur:1800}];
@@ -970,23 +988,29 @@ function getNightSlides(role, night){
 }
 function getDawnSlides(log){
   const slides=[
-    {bg:CIN_BG.dawn,   icon:'✨', title:'Ніч добігає кінця...', sub:'Місто чекає на світанок', dur:2000},
-    {bg:CIN_BG.dawn,   icon:'🌅', title:'Сонце повільно сходить...', sub:'Новий день приносить відповіді', dur:2000},
+    {bg:CIN_BG.dawn,   icon:'✨', title:'Ніч добігає кінця...', sub:'Місто чекає на світанок', dur:2600},
+    {bg:CIN_BG.dawn,   icon:'🌅', title:'Сонце повільно сходить...', sub:'Новий день приносить відповіді', dur:2600},
   ];
   (log||[]).forEach(ev=>{
     slides.push({
       bg: ev.emoji==='💀'?CIN_BG.death:(ev.emoji==='🏥'?CIN_BG.doctor:CIN_BG.dawn),
-      icon:ev.emoji, title:ev.text, sub:'', dur:3000,
+      icon:ev.emoji, title:ev.text, sub:'', dur:3600,
     });
   });
-  slides.push({bg:CIN_BG.day, icon:'☀️', title:'Місто прокидається...', sub:'Час говорити та шукати правду', dur:1800});
+  slides.push({bg:CIN_BG.day, icon:'☀️', title:'Місто прокидається...', sub:'Час говорити та шукати правду', dur:2400});
   return slides;
 }
 function getDaySlides(){
-  return[{bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:2000}];
+  return[{bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:2600}];
 }
 
 // ── PHASES ────────────────────────────────────
+function clearPhaseView(){
+  // Instantly replace phaseC with a dark placeholder so nothing shows through the cinematic
+  const C=document.getElementById('phaseC');
+  C.innerHTML='<div style="flex:1;background:var(--bg)"></div>';
+}
+
 function onPhase(m){
   S.phase=m.phase;S.nightActed=false;S.nightTarget=null;S.myVote=undefined;
   document.getElementById('voteSheet').classList.remove('open');
@@ -997,6 +1021,7 @@ function onPhase(m){
       setPhase('🌙 НІЧ',`Ніч ${m.night}`);
       vib([80,40,80]);
       S.nightTurn=m.turn||null;
+      clearPhaseView();
       playCinematic(getNightIntroSlides(m.night),()=>{
         if(S.nightTurn){
           onNightTurnReady(null, S.nightTurn);
@@ -1007,11 +1032,13 @@ function onPhase(m){
       break;
     case 'dawn':
       setPhase('🌅 СВІТАНОК','');
+      clearPhaseView();
       playCinematic(getDawnSlides(m.log||[]),()=>renderDawn(m.log||[]));
       break;
     case 'day':
       setPhase('☀️ ДЕНЬ','Обговорення');
       vib(50);
+      clearPhaseView();
       playCinematic(getDaySlides(),()=>renderDay());
       break;
     case 'voting':
@@ -1252,7 +1279,7 @@ function onGameOver(m){
   const icon=m.winner==='civilians'?'🕊️':'🔫';
   const title=m.winner==='civilians'?'Місто врятоване!':'Мафія захопила місто!';
   const sub=win?'🏆 Ти переміг!':'😔 Ти програв...';
-  playCinematic([{bg:CIN_BG.victory,icon,title,sub,dur:2800}],()=>showGameOver(m,win));
+  playCinematic([{bg:CIN_BG.victory,icon,title,sub,dur:3400}],()=>showGameOver(m,win));
   vib(win?[200,100,200,100,400]:[400,100,100]);
 }
 function showGameOver(m,win){
