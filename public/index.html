@@ -397,6 +397,79 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
 .sparkle{position:fixed;pointer-events:none;z-index:9999;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%);animation:sparkleAnim .6s ease forwards}
 @keyframes sparkleAnim{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(0)}}
 
+/* ═══ SUSPECT TOKEN ════════════════════════════ */
+.dpc{position:relative}
+.suspect-badge{position:absolute;top:-4px;right:-4px;font-size:12px;animation:suspectPop .4s var(--spring);z-index:2}
+@keyframes suspectPop{from{transform:scale(0) rotate(-20deg)}to{transform:none}}
+
+/* ═══ DEAD REACTIONS ═══════════════════════════ */
+.dead-react-bar{padding:8px 14px calc(8px + var(--sb));border-top:1px solid var(--border);background:rgba(8,8,16,.95);backdrop-filter:blur(20px);text-align:center;flex-shrink:0}
+.react-btn{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:20px;cursor:pointer;transition:transform .15s var(--spring),background .2s;line-height:1}
+.react-btn:active{transform:scale(.85)}
+.react-btn:hover{background:var(--card)}
+
+/* ═══ FLOATING EMOJI ═══════════════════════════ */
+.float-emoji{position:fixed;pointer-events:none;z-index:9999;font-size:24px;animation:floatUp 1.6s ease forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}80%{opacity:.8}100%{opacity:0;transform:translateY(-80px) scale(.5)}}
+
+/* ═══ DEATH ANIMATION ══════════════════════════ */
+@keyframes deathShatter{
+  0%{opacity:1;transform:scale(1) rotate(0deg);filter:saturate(1)}
+  30%{opacity:.8;transform:scale(1.3) rotate(-15deg);filter:saturate(0) brightness(2)}
+  60%{opacity:.4;transform:scale(.8) rotate(20deg) translateY(-10px);filter:saturate(0)}
+  100%{opacity:0;transform:scale(0) rotate(-30deg) translateY(20px);filter:saturate(0) brightness(0)}
+}
+.dav.dying{animation:deathShatter .8s var(--spring) forwards!important}
+@keyframes deathRipple{0%{box-shadow:0 0 0 0 rgba(229,62,62,.6)}100%{box-shadow:0 0 0 30px rgba(229,62,62,0)}}
+.dpc.just-died .dav{animation:deathRipple .6s ease forwards,deathShatter .8s var(--spring) .2s forwards!important}
+
+/* ═══ ACHIEVEMENTS ══════════════════════════════ */
+.ach-toast{
+  position:fixed;bottom:calc(80px + var(--sb));left:50%;transform:translateX(-50%);
+  background:linear-gradient(135deg,rgba(214,158,46,.15),rgba(246,194,85,.08));
+  border:1px solid rgba(246,194,85,.4);border-radius:20px;
+  padding:12px 20px;display:flex;align-items:center;gap:10px;
+  z-index:9998;white-space:nowrap;backdrop-filter:blur(16px);
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 20px rgba(214,158,46,.2);
+  animation:achIn .5s var(--spring);
+}
+@keyframes achIn{from{opacity:0;transform:translateX(-50%) translateY(30px) scale(.85)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+.ach-icon{font-size:24px}
+.ach-text{display:flex;flex-direction:column}
+.ach-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold2)}
+.ach-name{font-size:14px;font-weight:600;color:var(--text)}
+
+/* ═══ PROSTITUTE ROLE COLOR ════════════════════ */
+.apc.sp{border-color:#ed64a6;background:rgba(237,100,166,.12);box-shadow:0 0 20px rgba(237,100,166,.25)}
+
+/* ═══ SETTINGS PANEL ════════════════════════════ */
+.settings-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:300;opacity:0;pointer-events:none;transition:opacity .3s}
+.settings-ov.open{opacity:1;pointer-events:all}
+.settings-panel{
+  position:fixed;bottom:0;left:0;right:0;z-index:301;
+  background:var(--surface);border-radius:28px 28px 0 0;
+  padding:20px 20px calc(24px + var(--sb));
+  transform:translateY(100%);transition:transform .55s var(--spring);
+  max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.settings-panel.open{transform:none}
+.settings-title{font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--text2);text-align:center;margin-bottom:18px}
+.settings-section{margin-bottom:18px}
+.settings-section-title{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border-radius:12px;margin-bottom:7px;border:1px solid var(--border)}
+.settings-row-left{display:flex;align-items:center;gap:10px}
+.settings-row-icon{font-size:18px}
+.settings-row-label{font-size:14px;font-weight:500}
+.settings-row-sub{font-size:11px;color:var(--text3);margin-top:1px}
+/* Toggle switch */
+.tog{position:relative;width:44px;height:24px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog-sl{position:absolute;inset:0;background:var(--card2);border-radius:24px;transition:background .3s;cursor:pointer;border:1px solid var(--border)}
+.tog-sl::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:#fff;border-radius:50%;transition:transform .3s var(--spring)}
+input:checked+.tog-sl{background:var(--purple);border-color:var(--purple)}
+input:checked+.tog-sl::before{transform:translateX(20px)}
+
 /* ═══ PHASE TRANSITION FLASH ════════════════════ */
 .phase-flash{position:fixed;inset:0;z-index:89;pointer-events:none;opacity:0;animation:phaseFlash .8s ease forwards}
 @keyframes phaseFlash{0%{opacity:.4}100%{opacity:0}}
@@ -420,6 +493,8 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
     <div class="hrp"><span class="hrp-ic">⭐</span><span class="hrp-lb" style="color:#d69e2e">Шериф</span></div>
     <div class="hrp"><span class="hrp-ic">💊</span><span class="hrp-lb" style="color:#38a169">Лікар</span></div>
     <div class="hrp"><span class="hrp-ic">🏘️</span><span class="hrp-lb" style="color:#4299e1">Мирний</span></div>
+    <div class="hrp"><span class="hrp-ic">💃</span><span class="hrp-lb" style="color:#ed64a6">Повія</span></div>
+    <div class="hrp"><span class="hrp-ic">🕵️</span><span class="hrp-lb" style="color:#9f7aea">Детектив</span></div>
   </div>
   <div id="tgPrev" style="display:none"></div>
   <div class="home-card">
@@ -452,6 +527,7 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
   <div class="lobby-players" id="lobbyPlayers"></div>
   <div class="lobby-actions">
     <button class="btn btn-danger" id="startBtn" style="display:none">🎭 Почати гру</button>
+    <button class="btn btn-ghost" id="settingsBtn" style="display:none" onclick="openSettings()">⚙️ Налаштування гри</button>
     <button class="btn btn-ghost" id="leaveBtn">← Вийти</button>
   </div>
 </div>
@@ -527,6 +603,62 @@ button,.btn{touch-action:manipulation;cursor:pointer;border:none;outline:none}
   <div class="role-display" id="roleContent"></div>
 </div>
 
+<!-- Settings overlay -->
+<div class="settings-ov" id="settingsOv" onclick="closeSettings(event)"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-title">⚙️ НАЛАШТУВАННЯ ГРИ</div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Режим гри</div>
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <span class="settings-row-icon">⚡</span>
+        <div><div class="settings-row-label">Швидка гра</div><div class="settings-row-sub">Коротші кінематики та таймери</div></div>
+      </div>
+      <label class="tog"><input type="checkbox" id="fastModeToggle" onchange="onSettingsChange()"><span class="tog-sl"></span></label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Активні ролі</div>
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <span class="settings-row-icon">💃</span>
+        <div><div class="settings-row-label">Повія</div><div class="settings-row-sub">Блокує дію ролі вночі</div></div>
+      </div>
+      <label class="tog"><input type="checkbox" id="roleProstitute" checked onchange="onSettingsChange()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <span class="settings-row-icon">🕵️</span>
+        <div><div class="settings-row-label">Детектив</div><div class="settings-row-sub">Дізнається роль загиблих</div></div>
+      </div>
+      <label class="tog"><input type="checkbox" id="roleDetective" checked onchange="onSettingsChange()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <span class="settings-row-icon">⭐</span>
+        <div><div class="settings-row-label">Шериф</div><div class="settings-row-sub">Перевіряє гравців вночі</div></div>
+      </div>
+      <label class="tog"><input type="checkbox" id="roleSheriff" checked onchange="onSettingsChange()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <span class="settings-row-icon">💊</span>
+        <div><div class="settings-row-label">Лікар</div><div class="settings-row-sub">Рятує гравців вночі</div></div>
+      </div>
+      <label class="tog"><input type="checkbox" id="roleDoctor" checked onchange="onSettingsChange()"><span class="tog-sl"></span></label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Ачівки</div>
+    <div id="achList" style="display:flex;flex-direction:column;gap:7px"></div>
+  </div>
+
+  <button class="btn btn-ghost btn-sm" onclick="closeSettings()" style="margin-top:4px">Закрити</button>
+</div>
+
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
@@ -544,6 +676,13 @@ const S = {
   nightTarget:null, myVote:undefined,
   wsReady:false, reconnecting:false, deadDismissed:false, nightTurn:null,
   botUsername:'',
+  suspects: new Set(),            // suspect token targets
+  detectiveLog: [],               // [{name, role, night}]
+  settings: {                     // game settings (host-controlled)
+    fastMode: false,
+    roles: {prostitute:true, detective:true, sheriff:true, doctor:true},
+    dayDuration: 60,
+  },
 };
 const SK='mf_s';
 const saveS=()=>{try{sessionStorage.setItem(SK,JSON.stringify({myId:S.myId,code:S.code,name:S.name,avatarUrl:S.avatarUrl,tgVerified:S.tgVerified}));}catch{}};
@@ -551,12 +690,14 @@ const loadS=()=>{try{return JSON.parse(sessionStorage.getItem(SK)||'null');}catc
 const clearS=()=>sessionStorage.removeItem(SK);
 
 const ROLES={
-  mafia:   {emoji:'🔫',name:'Мафія',  color:'#e53e3e',desc:'Кожну ніч обирайте жертву. Перемогли коли мафія ≥ мирних.'},
-  sheriff: {emoji:'⭐',name:'Шериф',  color:'#d69e2e',desc:'Кожну ніч перевіряйте одного — мафія чи мирний?'},
-  doctor:  {emoji:'💊',name:'Лікар',  color:'#38a169',desc:'Кожну ніч рятуйте одного гравця. Можна себе!'},
-  civilian:{emoji:'🏘️',name:'Мирний',color:'#4299e1',desc:'Знайдіть мафію обговоренням та голосуванням.'},
+  mafia:     {emoji:'🔫',name:'Мафія',    color:'#e53e3e',desc:'Кожну ніч обирайте жертву. Перемогли коли мафія ≥ мирних.'},
+  sheriff:   {emoji:'⭐',name:'Шериф',    color:'#d69e2e',desc:'Кожну ніч перевіряйте одного — мафія чи мирний?'},
+  doctor:    {emoji:'💊',name:'Лікар',    color:'#38a169',desc:'Кожну ніч рятуйте одного гравця. Можна себе!'},
+  civilian:  {emoji:'🏘️',name:'Мирний',  color:'#4299e1',desc:'Знайдіть мафію обговоренням та голосуванням.'},
+  prostitute:{emoji:'💃',name:'Повія',   color:'#ed64a6',desc:'Кожну ніч відвідуйте одного гравця — блокуєте його дію. Небезпечно!'},
+  detective: {emoji:'🕵️',name:'Детектив',color:'#9f7aea',desc:'Після кожної ночі дізнаєтесь роль загиблого. Знання — сила!'},
 };
-const RC={mafia:'#e53e3e',sheriff:'#d69e2e',doctor:'#38a169',civilian:'#4299e1'};
+const RC={mafia:'#e53e3e',sheriff:'#d69e2e',doctor:'#38a169',civilian:'#4299e1',prostitute:'#ed64a6',detective:'#9f7aea'};
 
 // ══════════════════════════════════════════════
 // 🎆 RIPPLE EFFECT ON ALL BUTTONS
@@ -706,7 +847,29 @@ function onMsg(m){
     case 'sheriff_result':
       S.sheriffLog.unshift({name:m.name,isMafia:m.isMafia,night:S.snap?.night||1});
       buildRoleCard();
-      toast(`🔍 ${m.name}: ${m.isMafia?'🔴 МАФІЯ!':'🟢 Мирний'}`,m.isMafia?'err':'ok');break;
+      toast(`🔍 ${m.name}: ${m.isMafia?'🔴 МАФІЯ!':'🟢 Мирний'}`,m.isMafia?'err':'ok');
+      if(m.isMafia) unlockAchievement('sheriff_found');
+      break;
+    case 'detective_result':
+      S.detectiveLog.unshift({name:m.name,role:m.role,night:S.snap?.night||1});
+      buildRoleCard();
+      toast(`🕵️ ${m.name} був: ${ROLES[m.role]?.name||m.role}`,'ok');
+      break;
+    case 'action_blocked':
+      toast('💃 Твою дію заблоковано повією!','err');
+      break;
+    case 'suspect_update':
+      if(m.suspects) S.suspects=new Set(m.suspects);
+      if(S.phase==='day'||S.phase==='voting') renderDay();
+      break;
+    case 'reaction':{
+      // Show floating emoji from the sender's avatar in day strip
+      const senderEl=document.querySelector(`#dpc_${m.playerId} .dav`);
+      if(senderEl){
+        const rect=senderEl.getBoundingClientRect();
+        spawnFloatingEmoji(m.emoji,rect.left+rect.width/2,rect.top);
+      }
+      break;}
     case 'night_acted':S.nightActed=true;break;
     case 'night_turn':onNightTurn(m);break;
     case 'game_over':onGameOver(m);break;
@@ -714,6 +877,7 @@ function onMsg(m){
       const wasAlive2=S.myAlive;
       const prevPhase=S.phase;
       S.snap=m;S.myAlive=m.myAlive;S.phase=m.phase;
+      checkDeaths(m);
       if(m.myRole&&m.myRole!==S.myRole){S.myRole=m.myRole;updatePill(false);buildRoleCard();}
       if(S.myId&&!prevPhase&&m.phase!=='lobby'){
         showScreen('sc-game');
@@ -721,7 +885,7 @@ function onMsg(m){
         restoreGameFromSnap(m);
         saveS();break;
       }
-      if(wasAlive2&&!S.myAlive&&!S.deadDismissed&&m.phase!=='game_over'&&m.phase!=='finished')showDead();
+      if(wasAlive2&&!S.myAlive&&!S.deadDismissed&&m.phase!=='game_over'&&m.phase!=='finished'){showDead();SND.death();}
       if(!S.myAlive&&m.phase!=='game_over'&&m.phase!=='finished')updatePill(true);
       fromSnap();saveS();break;}
     case 'pong':break;
@@ -742,15 +906,19 @@ const CIN_BG={
   mafia:  'radial-gradient(ellipse at 50% 50%, #300202 0%, #160106 50%, #050108 100%)',
   sheriff:'radial-gradient(ellipse at 50% 0%, #2a1e00 0%, #160e00 50%, #050406 100%)',
   doctor: 'radial-gradient(ellipse at 50% 50%, #022806 0%, #011604 50%, #020608 100%)',
+  prostitute:'radial-gradient(ellipse at 50% 50%, #2d0a20 0%, #180612 50%, #06020a 100%)',
+  detective: 'radial-gradient(ellipse at 50% 0%, #0e0830 0%, #060420 50%, #020210 100%)',
   sleep:  'radial-gradient(ellipse at 50% 0%, #08060e 0%, #04030a 100%)',
   death:  'radial-gradient(ellipse at 50% 50%, #300108 0%, #160106 50%, #060108 100%)',
   victory:'radial-gradient(ellipse at 50% 0%, #102808 0%, #081402 50%, #020608 100%)',
   intro:  'radial-gradient(ellipse at 50% 0%, #180630 0%, #0c0220 50%, #040110 100%)',
-  reveal_mafia:   'radial-gradient(ellipse at 50% 50%, #380202 0%, #200106 50%, #080112 100%)',
-  reveal_sheriff: 'radial-gradient(ellipse at 50% 0%, #301c00 0%, #1a0e00 50%, #060408 100%)',
-  reveal_doctor:  'radial-gradient(ellipse at 50% 50%, #022e08 0%, #011a04 50%, #020608 100%)',
-  reveal_civilian:'radial-gradient(ellipse at 50% 0%, #021e38 0%, #010f20 50%, #020810 100%)',
-  transition:     'radial-gradient(ellipse at 50% 0%, #0a0816 0%, #040408 100%)',
+  reveal_mafia:      'radial-gradient(ellipse at 50% 50%, #380202 0%, #200106 50%, #080112 100%)',
+  reveal_sheriff:    'radial-gradient(ellipse at 50% 0%, #301c00 0%, #1a0e00 50%, #060408 100%)',
+  reveal_doctor:     'radial-gradient(ellipse at 50% 50%, #022e08 0%, #011a04 50%, #020608 100%)',
+  reveal_civilian:   'radial-gradient(ellipse at 50% 0%, #021e38 0%, #010f20 50%, #020810 100%)',
+  reveal_prostitute: 'radial-gradient(ellipse at 50% 50%, #2e0818 0%, #180412 50%, #08010a 100%)',
+  reveal_detective:  'radial-gradient(ellipse at 50% 0%, #0c0828 0%, #060418 50%, #020210 100%)',
+  transition:        'radial-gradient(ellipse at 50% 0%, #0a0816 0%, #040408 100%)',
 };
 
 let cinStarted=0, cinTotal=0;
@@ -758,6 +926,10 @@ let cinOnDone=null;
 
 function playCinematic(slides, onDone){
   if(cinTimer){clearTimeout(cinTimer);cinTimer=null;}
+  // Fast mode: halve all slide durations
+  if(S.settings.fastMode){
+    slides=slides.map(s=>({...s,dur:Math.round((s.dur||2000)*0.5)}));
+  }
   const ov=document.getElementById('cinema');
   const prog=document.getElementById('cinProg');
   const content=document.getElementById('cinContent');
@@ -936,10 +1108,12 @@ function startCinStars(){
 // ── CINEMATIC SEQUENCES ──────────────────────
 function getIntroSlides(role){
   const REVEAL={
-    mafia:   {bg:CIN_BG.reveal_mafia,   icon:'🔫', title:'ТИ — МАФІЯ',   sub:'Знищуй місто з тіні. Ніхто не повинен дізнатись.'},
-    sheriff: {bg:CIN_BG.reveal_sheriff, icon:'⭐', title:'ТИ — ШЕРИФ',   sub:'Знайди і знешкодь мафію. Місто вірить тобі.'},
-    doctor:  {bg:CIN_BG.reveal_doctor,  icon:'💊', title:'ТИ — ЛІКАР',   sub:'Рятуй невинних. Твоя уважність — їхнє життя.'},
-    civilian:{bg:CIN_BG.reveal_civilian,icon:'🏘️', title:'ТИ — МИРНИЙ', sub:'Знайди мафію обговоренням та голосуванням.'},
+    mafia:      {bg:CIN_BG.reveal_mafia,      icon:'🔫', title:'ТИ — МАФІЯ',    sub:'Знищуй місто з тіні. Ніхто не повинен дізнатись.'},
+    sheriff:    {bg:CIN_BG.reveal_sheriff,    icon:'⭐', title:'ТИ — ШЕРИФ',    sub:'Знайди і знешкодь мафію. Місто вірить тобі.'},
+    doctor:     {bg:CIN_BG.reveal_doctor,     icon:'💊', title:'ТИ — ЛІКАР',    sub:'Рятуй невинних. Твоя уважність — їхнє життя.'},
+    civilian:   {bg:CIN_BG.reveal_civilian,   icon:'🏘️', title:'ТИ — МИРНИЙ',  sub:'Знайди мафію обговоренням та голосуванням.'},
+    prostitute: {bg:CIN_BG.reveal_prostitute, icon:'💃', title:'ТИ — ПОВІЯ',    sub:'Блокуй дії небезпечних гравців вночі. Будь обережна!'},
+    detective:  {bg:CIN_BG.reveal_detective,  icon:'🕵️', title:'ТИ — ДЕТЕКТИВ', sub:'Після кожної ночі ти дізнаєшся роль загиблого.'},
   };
   const rev=REVEAL[role]||REVEAL.civilian;
   return[
@@ -957,22 +1131,42 @@ function getNightIntroSlides(night){
 }
 function getRoleWakeSlides(role){
   const WAKE={
-    mafia:   {bg:CIN_BG.mafia,   icon:'🔫', title:'Мафія прокидається...',   sub:'Оберіть жертву цієї ночі',   dur:2800},
-    sheriff: {bg:CIN_BG.sheriff, icon:'⭐', title:'Прокидається шериф...',   sub:'Час розкрити правду міста',   dur:2800},
-    doctor:  {bg:CIN_BG.doctor,  icon:'💊', title:'Прокидається лікар...',   sub:'Хтось потребує захисту сьогодні', dur:2800},
+    mafia:      {bg:CIN_BG.mafia,      icon:'🔫', title:'Мафія прокидається...',    sub:'Оберіть жертву цієї ночі',         dur:2800},
+    sheriff:    {bg:CIN_BG.sheriff,    icon:'⭐', title:'Прокидається шериф...',    sub:'Час розкрити правду міста',         dur:2800},
+    doctor:     {bg:CIN_BG.doctor,     icon:'💊', title:'Прокидається лікар...',    sub:'Хтось потребує захисту сьогодні',  dur:2800},
+    prostitute: {bg:CIN_BG.prostitute, icon:'💃', title:'Прокидається повія...',    sub:'Кого відвідати цієї ночі?',         dur:2800},
+    detective:  {bg:CIN_BG.detective,  icon:'🕵️', title:'Прокидається детектив...', sub:'Спостерігай за подіями цієї ночі', dur:2800},
   };
   return[WAKE[role]||{bg:CIN_BG.sleep,icon:'💤',title:'Місто спить...',sub:'',dur:2000}];
 }
 function getRoleSleepSlides(role){
-  const txt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
+  const txt={
+    mafia:'Мафія повертається до тіні...',
+    sheriff:'Шериф закриває очі...',
+    doctor:'Лікар засинає...',
+    prostitute:'Повія повертається додому...',
+    detective:'Детектив аналізує побачене...',
+  };
   return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:2400}];
 }
 function getTurnTransitionSlides(from, to){
-  const sleepTxt={mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',doctor:'Лікар засинає...'};
-  const wakeTxt ={mafia:'Мафія прокидається...',sheriff:'Прокидається шериф...',doctor:'Прокидається лікар...'};
-  const wakeSub ={mafia:'Мафія обирає свою жертву',sheriff:'Шериф іде на перевірку',doctor:'Лікар поспішає врятувати'};
-  const wakeBg  ={mafia:CIN_BG.mafia,sheriff:CIN_BG.sheriff,doctor:CIN_BG.doctor};
-  const wakeIco ={mafia:'🔫',sheriff:'⭐',doctor:'💊'};
+  const sleepTxt={
+    mafia:'Мафія повертається до тіні...',sheriff:'Шериф закриває очі...',
+    doctor:'Лікар засинає...',prostitute:'Повія повертається додому...',
+    detective:'Детектив аналізує побачене...',
+  };
+  const wakeTxt={
+    mafia:'Мафія прокидається...',sheriff:'Прокидається шериф...',
+    doctor:'Прокидається лікар...',prostitute:'Прокидається повія...',
+    detective:'Прокидається детектив...',
+  };
+  const wakeSub={
+    mafia:'Мафія обирає свою жертву',sheriff:'Шериф іде на перевірку',
+    doctor:'Лікар поспішає врятувати',prostitute:'Кого відвідати цієї ночі?',
+    detective:'Спостерігай за подіями',
+  };
+  const wakeBg={mafia:CIN_BG.mafia,sheriff:CIN_BG.sheriff,doctor:CIN_BG.doctor,prostitute:CIN_BG.prostitute,detective:CIN_BG.detective};
+  const wakeIco={mafia:'🔫',sheriff:'⭐',doctor:'💊',prostitute:'💃',detective:'🕵️'};
   const slides=[];
   if(from) slides.push({bg:CIN_BG.sleep, icon:'💤', title:sleepTxt[from]||'Засинає...', sub:'', dur:2200});
   if(to)   slides.push({bg:wakeBg[to]||CIN_BG.sleep, icon:wakeIco[to]||'💤',
@@ -1016,7 +1210,7 @@ function onPhase(m){
   switch(m.phase){
     case 'night':
       setPhase('🌙 НІЧ',`Ніч ${m.night}`);
-      vib([80,40,80]);
+      vib([80,40,80]);SND.night();
       S.nightTurn=m.turn||null;
       clearPhaseView();
       playCinematic(getNightIntroSlides(m.night),()=>{
@@ -1030,11 +1224,11 @@ function onPhase(m){
     case 'dawn':
       setPhase('🌅 СВІТАНОК','');
       clearPhaseView();
-      playCinematic(getDawnSlides(m.log||[]),()=>renderDawn(m.log||[]));
+      playCinematic(getDawnSlides(m.log||[]),()=>{renderDawn(m.log||[]);SND.day();});
       break;
     case 'day':
       setPhase('☀️ ДЕНЬ','Обговорення');
-      vib(50);
+      vib(50);SND.day();
       clearPhaseView();
       playCinematic(getDaySlides(),()=>renderDay());
       break;
@@ -1124,6 +1318,8 @@ function renderLobby(snap){
     </div>`).join('');
   const sb=document.getElementById('startBtn');
   sb.style.display=S.isHost?'flex':'none';sb.disabled=ps.length<4;sb.style.opacity=ps.length<4?.5:1;
+  const setBtn=document.getElementById('settingsBtn');
+  if(setBtn) setBtn.style.display=S.isHost?'flex':'none';
 }
 
 // ── NIGHT ─────────────────────────────────────
@@ -1132,9 +1328,11 @@ function renderNightSleeping(){
 
   // Contextual text visible to everyone
   const TURN_MSG={
-    mafia:   {icon:'🔫', color:'#e53e3e', main:'Мафія обирає свою жертву...', sub:'Місто тремтить у темряві'},
-    sheriff: {icon:'⭐', color:'#d69e2e', main:'Шериф вирушає на перевірку...', sub:'Закон не спить навіть вночі'},
-    doctor:  {icon:'💊', color:'#38a169', main:'Лікар поспішає врятувати когось...', sub:'Чиєсь життя у надійних руках'},
+    mafia:      {icon:'🔫', color:'#e53e3e', main:'Мафія обирає свою жертву...', sub:'Місто тремтить у темряві'},
+    sheriff:    {icon:'⭐', color:'#d69e2e', main:'Шериф вирушає на перевірку...', sub:'Закон не спить навіть вночі'},
+    doctor:     {icon:'💊', color:'#38a169', main:'Лікар поспішає врятувати когось...', sub:'Чиєсь життя у надійних руках'},
+    prostitute: {icon:'💃', color:'#ed64a6', main:'Повія відвідує когось вночі...', sub:'Чиясь дія буде заблокована'},
+    detective:  {icon:'🕵️', color:'#9f7aea', main:'Детектив спостерігає з тіні...', sub:'Таємниці ночі стануть відомі'},
   };
   let mainTxt, subTxt, icon='🌙', color='rgba(200,180,255,.6)';
   if(!S.myAlive){
@@ -1162,12 +1360,20 @@ function renderNightSleeping(){
 
 function renderNight(){
   const snap=S.snap;const C=document.getElementById('phaseC');
-  if(S.nightActed||!S.myAlive||S.myRole==='civilian'||S.nightTurn!==S.myRole){renderNightSleeping();return;}
+  const activeRoles=['mafia','sheriff','doctor','prostitute'];
+  if(S.nightActed||!S.myAlive||!activeRoles.includes(S.myRole)||S.nightTurn!==S.myRole){
+    // Detective has no action — just observes
+    if(S.myRole==='detective'&&S.nightTurn===S.myRole){
+      renderNightDetective();return;
+    }
+    renderNightSleeping();return;
+  }
   const alive=snap?.players?.filter(p=>p.alive&&p.id!==S.myId)||[];
   const r=ROLES[S.myRole];
-  const tc={mafia:'sm',sheriff:'ss',doctor:'sd'}[S.myRole];
-  const lbl={mafia:'🎯 Оберіть жертву',sheriff:'🔍 Кого перевірити?',doctor:'💊 Кого врятувати?'}[S.myRole];
-  const skipTxt={mafia:'Пропустити вбивство',sheriff:'Пропустити перевірку',doctor:'Нікого не рятувати'}[S.myRole];
+  const tcMap={mafia:'sm',sheriff:'ss',doctor:'sd',prostitute:'sp'};
+  const tc=tcMap[S.myRole]||'ss';
+  const lbl={mafia:'🎯 Оберіть жертву',sheriff:'🔍 Кого перевірити?',doctor:'💊 Кого врятувати?',prostitute:'💃 Кого відвідати?'}[S.myRole];
+  const skipTxt={mafia:'Пропустити вбивство',sheriff:'Пропустити перевірку',doctor:'Нікого не рятувати',prostitute:'Нікого не відвідувати'}[S.myRole];
   C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
     <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
     <div class="night-content" style="width:100%">
@@ -1190,16 +1396,38 @@ function renderNight(){
   drawStars('sc');
 }
 
+function renderNightDetective(){
+  // Detective sees a summary of who is known — no action needed
+  const C=document.getElementById('phaseC');
+  const log=S.detectiveLog;
+  C.innerHTML=`<div class="night-bg phase-view"><canvas class="stars-canvas" id="sc"></canvas>
+    <style>@keyframes moonGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(200,180,255,.5))}50%{filter:drop-shadow(0 0 40px rgba(200,180,255,.9))}}</style>
+    <div class="night-content" style="width:100%;padding:14px">
+      <div style="font-size:52px;margin:14px 0 4px;animation:moonGlow 3s ease-in-out infinite">🕵️</div>
+      <div class="night-role-label" style="color:#9f7aea">Твої розслідування</div>
+      <div class="night-sub">Після ночі ти дізнаєшся роль загиблого</div>
+      ${log.length?`<div style="width:100%;max-width:340px;display:flex;flex-direction:column;gap:7px;margin-top:8px;overflow-y:auto">
+        ${log.map((e,i)=>`<div style="display:flex;align-items:center;gap:10px;background:rgba(159,122,234,.1);border:1px solid rgba(159,122,234,.25);border-radius:12px;padding:10px 13px;animation:su .35s var(--spring) both;animation-delay:${i*.07}s">
+          <span style="font-size:18px">${ROLES[e.role]?.emoji||'?'}</span>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600">${esc(e.name)}</div><div style="font-size:11px;color:var(--text3)">Ніч ${e.night}</div></div>
+          <div style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;background:${RC[e.role]||'#555'}22;color:${RC[e.role]||'#aaa'}">${ROLES[e.role]?.name||e.role}</div>
+        </div>`).join('')}
+      </div>`:'<div style="color:var(--text3);font-size:13px;margin-top:20px">Поки немає даних.<br>Зачекай на першу ніч.</div>'}
+    </div></div>`;
+  drawStars('sc');
+  // Auto-skip for detective (server handles, but send action)
+  if(!S.nightActed){wsSend({type:'night_action',targetId:null});S.nightActed=true;}
+}
+
 function selTgt(id,cls,el){
   S.nightTarget=id;
-  document.querySelectorAll('.apc').forEach(e=>{e.classList.remove('sm','ss','sd');e.querySelector('.apc-chk').textContent='';});
+  document.querySelectorAll('.apc').forEach(e=>{e.classList.remove('sm','ss','sd','sp');e.querySelector('.apc-chk').textContent='';});
   el.classList.add(cls);el.querySelector('.apc-chk').textContent='✓';
   const b=document.getElementById('confBtn');if(b){b.disabled=false;b.style.opacity=1;}
-  // Spawn sparkles at tap point
   const rect=el.getBoundingClientRect();
-  const colors={sm:'#ff6b6b',ss:'#f6c255',sd:'#68d391'};
+  const colors={sm:'#ff6b6b',ss:'#f6c255',sd:'#68d391',sp:'#f687b3'};
   spawnSparkles(rect.left+rect.width/2,rect.top+rect.height/2,colors[cls]||'#c8a0ff',6);
-  vib(8);
+  SND.click();vib(8);
 }
 
 function confNight(){
@@ -1230,25 +1458,63 @@ function renderDawn(log){
 // ── DAY ───────────────────────────────────────
 function renderDay(){
   const snap=S.snap;const ps=snap?.players||[];
+  const deadReactions=!S.myAlive?`
+    <div class="dead-react-bar" id="reactBar">
+      <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Реакції</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        ${['😂','🤔','👀','😱','👏','🔥','🤡','💀'].map(e=>`<button class="react-btn" onclick="sendReaction('${e}')">${e}</button>`).join('')}
+      </div>
+    </div>`:'';
   document.getElementById('phaseC').innerHTML=`
     <div class="day-view phase-view">
-      <div class="day-strip">${ps.map(p=>`<div class="dpc ${p.alive?'':'dead'}">
-        <div class="dav" style="${p.id===S.myId?'border-color:var(--purple)':''}">
-          ${p.avatarUrl?`<img src="${esc(p.avatarUrl)}" onerror="this.parentNode.innerHTML='${p.name[0].toUpperCase()}'">`:p.name[0].toUpperCase()}
-        </div>
-        <div class="dn">${esc(p.name)}</div></div>`).join('')}
+      <div class="day-strip">${ps.map(p=>{
+        const isSuspect=S.suspects.has(p.id);
+        return`<div class="dpc ${p.alive?'':'dead'}" id="dpc_${p.id}" onclick="${S.myAlive&&p.alive&&p.id!==S.myId?`toggleSuspect('${p.id}')`:''}" style="${S.myAlive&&p.alive&&p.id!==S.myId?'cursor:pointer':''}">
+          <div class="dav" style="${p.id===S.myId?'border-color:var(--purple)':''}${isSuspect?';border-color:#f6c255;box-shadow:0 0 10px rgba(246,194,85,.4)':''}">
+            ${p.avatarUrl?`<img src="${esc(p.avatarUrl)}" onerror="this.parentNode.innerHTML='${p.name[0].toUpperCase()}'">`:p.name[0].toUpperCase()}
+          </div>
+          ${isSuspect?'<div class="suspect-badge">🔍</div>':''}
+          <div class="dn">${esc(p.name)}</div>
+        </div>`;
+      }).join('')}
       </div>
       <div class="chat-area" id="chatArea"><div class="chat-sys">☀️ Починайте обговорення! Голосування з'явиться через 1 хвилину.</div></div>
       ${S.myAlive?`<div class="chat-bar"><textarea class="chat-in" id="chatIn" placeholder="Повідомлення…" rows="1" maxlength="300"></textarea>
-        <button class="send-btn" id="sendBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>`:''}
+        <button class="send-btn" id="sendBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>`:deadReactions}
     </div>`;
   if(snap?.messages){snap.messages.forEach(m=>appendMsg(m,false));scrollChat();}
   const ci=document.getElementById('chatIn');const sb=document.getElementById('sendBtn');
   if(ci&&sb){
-    function doSend(){const t=ci.value.trim();if(!t)return;wsSend({type:'chat',text:t});ci.value='';ci.style.height='';}
+    function doSend(){
+      const t=ci.value.trim();if(!t)return;
+      wsSend({type:'chat',text:t});ci.value='';ci.style.height='';
+      SND.send();
+      _msgCount++;if(_msgCount>=10)unlockAchievement('social');
+    }
     sb.addEventListener('click',doSend);
     ci.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}});
     ci.addEventListener('input',()=>{ci.style.height='auto';ci.style.height=Math.min(ci.scrollHeight,100)+'px';});
+  }
+}
+
+function toggleSuspect(id){
+  if(!S.myAlive)return;
+  if(S.suspects.has(id)){S.suspects.delete(id);}else{
+    S.suspects.add(id);SND.suspectOn();
+    _suspectCount++;if(_suspectCount>=3)unlockAchievement('suspicious');
+  }
+  wsSend({type:'suspect',targetId:id,active:S.suspects.has(id)});
+  renderDay();
+  if(S.snap?.messages){S.snap.messages.forEach(m=>appendMsg(m,false));scrollChat();}
+}
+function sendReaction(emoji){
+  wsSend({type:'reaction',emoji});
+  SND.click();vib(5);
+  _reactCount++;if(_reactCount>=5)unlockAchievement('reactor');
+  const myEl=document.querySelector(`#dpc_${S.myId} .dav`);
+  if(myEl){
+    const rect=myEl.getBoundingClientRect();
+    spawnFloatingEmoji(emoji,rect.left+rect.width/2,rect.top);
   }
 }
 function appendMsg(m,scroll=true){
@@ -1263,7 +1529,11 @@ function appendMsg(m,scroll=true){
 function scrollChat(){const a=document.getElementById('chatArea');if(a)a.scrollTop=a.scrollHeight;}
 
 // ── VOTING ────────────────────────────────────
-function openVotes(){document.getElementById('voteSheet').classList.add('open');renderVotes(S.snap?.votes||{});}
+function openVotes(){
+  document.getElementById('voteSheet').classList.add('open');
+  renderVotes(S.snap?.votes||{});
+  SND.vote();vib(30);
+}
 function renderVotes(votes){
   if(!S.snap)return;const vl=document.getElementById('vList');if(!vl)return;
   const ps=S.snap.players.filter(p=>p.alive&&p.id!==S.myId);
@@ -1280,7 +1550,7 @@ function renderVotes(votes){
 }
 function doVote(id){
   if(!S.myAlive)return;
-  S.myVote=id;wsSend({type:'vote',targetId:id});vib(10);
+  S.myVote=id;wsSend({type:'vote',targetId:id});vib(10);SND.vote();
   renderVotes(S.snap?.votes||{});
 }
 document.getElementById('skipVote').addEventListener('click',()=>{S.myVote=null;wsSend({type:'vote',targetId:null});toast('Голосування пропущено');vib(5);});
@@ -1294,10 +1564,18 @@ function onGameOver(m){
   document.getElementById('rolePill').classList.remove('on');
   const win=m.winner==='civilians'?S.myRole!=='mafia':S.myRole==='mafia';
   saveS();
+  // Achievements
+  if(win){
+    unlockAchievement('first_win');
+    if(S.myAlive) unlockAchievement('survivor');
+    if(S.myRole==='mafia'&&m.winner==='mafia') unlockAchievement('mafia_win');
+    if(S.myRole==='detective') unlockAchievement('detective_win');
+  }
   const icon=m.winner==='civilians'?'🕊️':'🔫';
   const title=m.winner==='civilians'?'Місто врятоване!':'Мафія захопила місто!';
   const sub=win?'🏆 Ти переміг!':'😔 Ти програв...';
   playCinematic([{bg:CIN_BG.victory,icon,title,sub,dur:3400}],()=>showGameOver(m,win));
+  setTimeout(()=>win?SND.win():SND.lose(),400);
   vib(win?[200,100,200,100,400]:[400,100,100]);
 }
 function showGameOver(m,win){
@@ -1340,6 +1618,7 @@ function buildRoleCard(){
   let extra='';
   if(role==='mafia'&&S.mafiaTeam.length>0)extra=`<div class="mafia-team"><div class="mt-title">🔴 Ваша команда мафії</div>${S.mafiaTeam.map(m=>`<div class="mt-row">${av(m.name,m.avatarUrl||'',30)}<span style="font-size:14px;font-weight:600">${esc(m.name)}</span>${m.tgVerified?'<span class="tg-check">✓</span>':''}</div>`).join('')}</div>`;
   if(role==='sheriff'&&S.sheriffLog.length>0)extra=`<div class="slog"><div class="sl-title">🔍 Результати перевірок</div>${S.sheriffLog.map(r=>`<div class="sl-row">Ніч ${r.night}: <strong>${esc(r.name)}</strong> — <span class="${r.isMafia?'mtag':'ctag'}">${r.isMafia?'🔴 МАФІЯ':'🟢 Чистий'}</span></div>`).join('')}</div>`;
+  if(role==='detective'&&S.detectiveLog.length>0)extra=`<div class="slog" style="border-color:rgba(159,122,234,.3);background:rgba(159,122,234,.06)"><div class="sl-title" style="color:#9f7aea">🕵️ Розслідування</div>${S.detectiveLog.map(e=>`<div class="sl-row">Ніч ${e.night}: <strong>${esc(e.name)}</strong> — <span style="color:${RC[e.role]||'#aaa'};font-weight:700">${ROLES[e.role]?.emoji||'?'} ${ROLES[e.role]?.name||e.role}</span></div>`).join('')}</div>`;
   const dead=!S.myAlive?`<div class="role-dead">☠️ Ти загинув. Можеш спостерігати за грою.</div>`:'';
   content.innerHTML=`<div class="role-emblem" style="color:${r.color};border-color:${r.color};background:${r.color}15">${r.emoji}</div>
     <div class="role-rname" style="color:${r.color}">${r.name}</div><div class="role-desc">${r.desc}</div>${dead}${extra}`;
@@ -1433,8 +1712,8 @@ function showScreen(id){
 }
 
 function resetUI(){
-  S.myRole=null;S.myAlive=true;S.mafiaTeam=[];S.sheriffLog=[];
-  S.deadDismissed=false;S.nightActed=false;S.nightTarget=null;
+  S.myRole=null;S.myAlive=true;S.mafiaTeam=[];S.sheriffLog=[];S.detectiveLog=[];
+  S.deadDismissed=false;S.nightActed=false;S.nightTarget=null;S.suspects=new Set();
   document.getElementById('rolePill').classList.remove('on');
   document.getElementById('voteSheet').classList.remove('open');
   document.getElementById('deadOv').classList.remove('show');
@@ -1548,8 +1827,159 @@ function drawStars(id){
   tick();
 }
 
+// ══════════════════════════════════════════════
+// 🔊 SOUND ENGINE (Web Audio API — no CORS)
+// ══════════════════════════════════════════════
+const SND = (() => {
+  let ctx = null;
+  const getCtx = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; };
+  function tone(freq, type, dur, vol=0.18, fadeIn=0.01, fadeOut=0.1) {
+    try {
+      const c=getCtx(),now=c.currentTime;
+      const osc=c.createOscillator(),gain=c.createGain();
+      osc.connect(gain);gain.connect(c.destination);
+      osc.type=type;osc.frequency.setValueAtTime(freq,now);
+      gain.gain.setValueAtTime(0,now);
+      gain.gain.linearRampToValueAtTime(vol,now+fadeIn);
+      gain.gain.linearRampToValueAtTime(0,now+dur-fadeOut);
+      osc.start(now);osc.stop(now+dur);
+    } catch(e){}
+  }
+  function chord(freqs,type,dur,vol=0.12){freqs.forEach((f,i)=>setTimeout(()=>tone(f,type,dur,vol),i*40));}
+  function noise(dur,vol=0.07){
+    try{
+      const c=getCtx(),buf=c.createBuffer(1,c.sampleRate*dur,c.sampleRate),d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(c.sampleRate*dur*.4));
+      const src=c.createBufferSource(),gain=c.createGain();
+      src.buffer=buf;gain.gain.setValueAtTime(vol,c.currentTime);
+      src.connect(gain);gain.connect(c.destination);src.start();
+    }catch(e){}
+  }
+  return {
+    click:  ()=>tone(880,'sine',.07,.1,.005,.04),
+    send:   ()=>tone(1200,'sine',.1,.08,.005,.06),
+    vote:   ()=>{tone(440,'triangle',.15,.1);setTimeout(()=>tone(660,'triangle',.15,.1),80);},
+    night:  ()=>{noise(.8,.08);setTimeout(()=>tone(80,'sawtooth',1.5,.06,.3,.5),200);},
+    day:    ()=>chord([523,659,784],'sine',.6,.1),
+    death:  ()=>{noise(.3,.12);chord([220,165,110],'sawtooth',.8,.08);},
+    win:    ()=>{chord([523,659,784,1046],'sine',1.2,.12);setTimeout(()=>chord([784,988,1174],'sine',.8,.1),400);},
+    lose:   ()=>{chord([220,196,175],'sawtooth',.9,.1);setTimeout(()=>tone(150,'sawtooth',.7,.08),500);},
+    achieve:()=>{chord([659,784,988],'sine',.5,.12);setTimeout(()=>tone(1318,'sine',.3,.1),300);},
+    suspectOn:()=>tone(660,'triangle',.12,.1),
+  };
+})();
+
+// ══════════════════════════════════════════════
+// 🏆 ACHIEVEMENTS SYSTEM
+// ══════════════════════════════════════════════
+const ACHIEVEMENTS = {
+  first_win:     {icon:'🏆',name:'Перша перемога',   desc:'Виграй свою першу гру'},
+  survivor:      {icon:'🛡️',name:'Невразливий',      desc:'Вижив до кінця гри'},
+  mafia_win:     {icon:'🔫',name:'Тінь міста',       desc:'Переможи у ролі мафії'},
+  sheriff_found: {icon:'⭐',name:'Чуття шерифа',     desc:'Правильно визначив мафіозника'},
+  detective_win: {icon:'🕵️',name:'Майстер дедукції', desc:'Переможи у ролі детектива'},
+  social:        {icon:'💬',name:'Душа компанії',    desc:'Надіслати 10+ повідомлень за гру'},
+  suspicious:    {icon:'🔍',name:'Параноїк',         desc:'Відмітити 3+ підозрюваних за гру'},
+  reactor:       {icon:'😂',name:'Глядач з душею',   desc:'Надіслати 5+ реакцій будучи мертвим'},
+};
+let _msgCount=0,_suspectCount=0,_reactCount=0;
+
+function unlockAchievement(id){
+  const ach=ACHIEVEMENTS[id];if(!ach)return;
+  let done=[];try{done=JSON.parse(localStorage.getItem('mf_ach')||'[]');}catch{}
+  if(done.includes(id))return;
+  done.push(id);try{localStorage.setItem('mf_ach',JSON.stringify(done));}catch{}
+  showAchievement(ach);SND.achieve();
+}
+function showAchievement(ach){
+  const el=document.createElement('div');
+  el.className='ach-toast';
+  el.innerHTML=`<div class="ach-icon">${ach.icon}</div><div class="ach-text"><div class="ach-label">Ачівка розблокована!</div><div class="ach-name">${ach.name}</div></div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.cssText+='opacity:0;transform:translateX(-50%) translateY(20px);transition:all .5s ease';setTimeout(()=>el.remove(),520);},3200);
+}
+function renderAchievements(){
+  const done=getUnlockedAchievements();
+  const list=document.getElementById('achList');if(!list)return;
+  list.innerHTML=Object.entries(ACHIEVEMENTS).map(([id,ach])=>{
+    const u=done.includes(id);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:${u?'rgba(214,158,46,.08)':'var(--card)'};border:1px solid ${u?'rgba(214,158,46,.3)':'var(--border)'};border-radius:12px;opacity:${u?1:.45}">
+      <span style="font-size:20px">${ach.icon}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:${u?'var(--gold2)':'var(--text2)'}">${ach.name}</div><div style="font-size:11px;color:var(--text3)">${ach.desc}</div></div>
+      ${u?'<span style="color:var(--gold2);font-size:16px">✓</span>':''}
+    </div>`;
+  }).join('');
+}
+function getUnlockedAchievements(){try{return JSON.parse(localStorage.getItem('mf_ach')||'[]');}catch{return [];}}
+
+// ══════════════════════════════════════════════
+// ⚙️ SETTINGS PANEL
+// ══════════════════════════════════════════════
+function openSettings(){
+  renderAchievements();
+  document.getElementById('fastModeToggle').checked=S.settings.fastMode;
+  document.getElementById('roleProstitute').checked=S.settings.roles.prostitute;
+  document.getElementById('roleDetective').checked=S.settings.roles.detective;
+  document.getElementById('roleSheriff').checked=S.settings.roles.sheriff;
+  document.getElementById('roleDoctor').checked=S.settings.roles.doctor;
+  document.getElementById('settingsOv').classList.add('open');
+  document.getElementById('settingsPanel').classList.add('open');
+  SND.click();
+}
+function closeSettings(e){
+  if(e&&e.target!==document.getElementById('settingsOv'))return;
+  document.getElementById('settingsOv').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+function onSettingsChange(){
+  S.settings.fastMode=document.getElementById('fastModeToggle').checked;
+  S.settings.roles.prostitute=document.getElementById('roleProstitute').checked;
+  S.settings.roles.detective=document.getElementById('roleDetective').checked;
+  S.settings.roles.sheriff=document.getElementById('roleSheriff').checked;
+  S.settings.roles.doctor=document.getElementById('roleDoctor').checked;
+  wsSend({type:'update_settings',settings:S.settings});
+  SND.click();
+}
+
+// ══════════════════════════════════════════════
+// 😂 FLOATING EMOJI REACTION
+// ══════════════════════════════════════════════
+function spawnFloatingEmoji(emoji,x,y){
+  const el=document.createElement('div');
+  el.className='float-emoji';
+  el.textContent=emoji;
+  el.style.cssText=`left:${x}px;top:${y}px;transform:translateX(-50%)`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1700);
+}
+
+// ══════════════════════════════════════════════
+// 💀 DEATH ANIMATION
+// ══════════════════════════════════════════════
+function animateDeath(playerId){
+  SND.death();vib([100,50,200]);
+  const el=document.querySelector(`#dpc_${playerId}`);if(!el)return;
+  el.classList.add('just-died');
+  const dav=el.querySelector('.dav');
+  if(dav){const rect=dav.getBoundingClientRect();spawnFloatingEmoji('💀',rect.left+rect.width/2,rect.top);}
+  setTimeout(()=>el.classList.remove('just-died'),1200);
+}
+let _prevAlive=new Set();
+function checkDeaths(snap){
+  if(!snap?.players)return;
+  const nowAlive=new Set(snap.players.filter(p=>p.alive).map(p=>p.id));
+  if(_prevAlive.size>0)_prevAlive.forEach(id=>{if(!nowAlive.has(id))animateDeath(id);});
+  _prevAlive=nowAlive;
+}
+
+// Play phase sounds
+function playPhaseSound(phase){
+  if(phase==='night')setTimeout(()=>SND.night(),500);
+  else if(phase==='day'||phase==='dawn')setTimeout(()=>SND.day(),400);
+  else if(phase==='voting')setTimeout(()=>SND.vote(),200);
+}
+
 // ── EVENTS ────────────────────────────────────
-document.getElementById('createBtn').addEventListener('click',()=>{
   const name=(document.getElementById('nameIn').value.trim()||S.name);
   if(!name){toast("Введи ім'я 👤",'err');return;}
   S.name=name;vib(10);
