@@ -1980,6 +1980,7 @@ function playPhaseSound(phase){
 }
 
 // ── EVENTS ────────────────────────────────────
+document.getElementById('createBtn').addEventListener('click',()=>{
   const name=(document.getElementById('nameIn').value.trim()||S.name);
   if(!name){toast("Введи ім'я 👤",'err');return;}
   S.name=name;vib(10);
