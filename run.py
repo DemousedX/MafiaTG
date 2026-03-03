@@ -101,10 +101,10 @@ async def send_and_track(
 def kb_play_button(url: str) -> ReplyKeyboardMarkup:
     """Постійна кнопка 'Грати' біля поля введення повідомлення."""
     return ReplyKeyboardMarkup(
-        [[KeyboardButton("🎭  Грати", web_app=WebAppInfo(url=url))]],
+        [[KeyboardButton("Грати", web_app=WebAppInfo(url=url))]],
         resize_keyboard=True,
         is_persistent=True,
-        input_field_placeholder="Відкрий гру або введи /help",
+        input_field_placeholder="Мафія · /help",
     )
 
 async def ensure_play_button(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
@@ -123,74 +123,45 @@ async def ensure_play_button(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int) -> No
         log.debug(f"ensure_play_button: {e}")
 
 # ─────────────────────────────────────────────
-# ТЕКСТИ — оновлений дизайн
+# ТЕКСТИ — мінімалізм
 # ─────────────────────────────────────────────
 WELCOME_TEXT = r"""
-🎭 *МАФІЯ* — соціальна гра для Telegram
+🎭 *Мафія*
 
-━━━━━━━━━━━━━━━━━━━
-👥 *4–20 гравців*
-🎲 *Таємні ролі*
-🌙 *Ніч та день*
-━━━━━━━━━━━━━━━━━━━
-
-Створи кімнату або приєднайся до друзів\!
+Соціальна гра для 4–20 гравців\.
+Ролі, брехня, дедукція\.
 """.strip()
 
 HELP_TEXT = r"""
-📖 *Як грати у Мафію*
+*Ролі*
 
-━━━━━━━━━━━━━━━━━━━
-🎭 *Ролі гравців*
-━━━━━━━━━━━━━━━━━━━
-🔫 *Мафія* — вбиває одного гравця щоночі
-⭐ *Шериф* — перевіряє підозрюваних вночі
-💊 *Лікар* — рятує когось від смерті вночі
-🏘️ *Мирний* — знаходить мафію голосуванням
+🔫 *Мафія* — вбиває вночі
+⭐ *Шериф* — перевіряє гравців
+💊 *Лікар* — рятує від смерті
+🏘️ *Мирний* — шукає мафію
 
-━━━━━━━━━━━━━━━━━━━
-🔄 *Хід гри*
-━━━━━━━━━━━━━━━━━━━
-1️⃣ Збери 4–20 гравців, поділись кодом
-2️⃣ Хост натискає *«Почати гру»*
-3️⃣ Всі отримують таємні ролі
-4️⃣ 🌙 *Ніч* — мафія та ролі діють потай
-5️⃣ ☀️ *День* — обговорення та голосування
-6️⃣ Гра триває до перемоги однієї зі сторін
+*Як грати*
 
-━━━━━━━━━━━━━━━━━━━
-🏆 *Перемога*
-━━━━━━━━━━━━━━━━━━━
-🕊️ *Мирні* — знищують всю мафію
-🔫 *Мафія* — зрівнюється з мирними
+Вночі кожна роль діє потай\.
+Вдень — обговорення та голосування\.
+Мирні перемагають, знищивши всю мафію\.
+Мафія — зрівнявшись із мирними\.
 """.strip()
 
 RULES_TEXT = r"""
-📜 *Правила гри*
+*Нічна фаза*
 
-━━━━━━━━━━━━━━━━━━━
-🌙 *Нічна фаза*
-━━━━━━━━━━━━━━━━━━━
-😴 Мирні засипають
-🔫 Мафія обирає жертву \(або пропускає\)
-⭐ Шериф перевіряє одного гравця
-💊 Лікар рятує одного гравця
+Місто засинає\. Мафія обирає жертву\.
+Шериф перевіряє одного гравця\.
+Лікар рятує одного гравця\.
 
-━━━━━━━━━━━━━━━━━━━
-☀️ *Денна фаза*
-━━━━━━━━━━━━━━━━━━━
-📢 Всі дізнаються результати ночі
-💬 1 хвилина обговорення в чаті
-🗳️ Голосування за підозрюваного
-☠️ Більшість голосів — гравець вибуває
+*Денна фаза*
 
-━━━━━━━━━━━━━━━━━━━
-⚖️ *Умови перемоги*
-━━━━━━━━━━━━━━━━━━━
-🕊️ *Мирні* — знищити всю мафію
-🔫 *Мафія* — зрівнятись із мирними
+Місто дізнається результати ночі\.
+Хвилина обговорення — потім голосування\.
+Хто набрав більше голосів — вибуває\.
 
-🎭 *Мінімум 4 гравці для старту\.*
+_Мінімум 4 гравці для старту\._
 """.strip()
 
 # ─────────────────────────────────────────────
@@ -198,12 +169,11 @@ RULES_TEXT = r"""
 # ─────────────────────────────────────────────
 def kb_main(url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎮  Відкрити гру", web_app=WebAppInfo(url=url))],
+        [InlineKeyboardButton("Грати →", web_app=WebAppInfo(url=url))],
         [
-            InlineKeyboardButton("📖  Як грати",  callback_data="help"),
-            InlineKeyboardButton("📜  Правила",   callback_data="rules"),
+            InlineKeyboardButton("Правила",    callback_data="rules"),
+            InlineKeyboardButton("Статистика", callback_data="stats"),
         ],
-        [InlineKeyboardButton("📊  Статистика", callback_data="stats")],
     ])
 
 def kb_back() -> InlineKeyboardMarkup:
@@ -213,8 +183,8 @@ def kb_back() -> InlineKeyboardMarkup:
 
 def kb_back_play(url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎮  Грати зараз", web_app=WebAppInfo(url=url))],
-        [InlineKeyboardButton("← Назад",         callback_data="main")],
+        [InlineKeyboardButton("Грати →",  web_app=WebAppInfo(url=url))],
+        [InlineKeyboardButton("← Назад", callback_data="main")],
     ])
 
 # ─────────────────────────────────────────────
@@ -238,16 +208,11 @@ def build_stats_text(data: dict) -> str:
     rooms   = data.get("rooms", 0)
     players = data.get("players", 0)
     games   = data.get("games", 0)
-    # Статус рядок
-    status = "🟢 Онлайн" if (rooms + players) > 0 else "🟡 Очікування гравців"
     return (
-        "📊 *Статистика сервера*\n\n"
-        "━━━━━━━━━━━━━━━━━━━\n"
-        f"🏠 *Кімнат активних:* `{rooms}`\n"
-        f"👥 *Гравців онлайн:*  `{players}`\n"
-        f"🎮 *Зіграно ігор:*    `{games}`\n"
-        "━━━━━━━━━━━━━━━━━━━\n"
-        f"⚡ *Статус:* {status}"
+        "*Статистика*\n\n"
+        f"Кімнат · `{rooms}`\n"
+        f"Гравців · `{players}`\n"
+        f"Ігор зіграно · `{games}`"
     )
 
 # ─────────────────────────────────────────────
@@ -296,12 +261,10 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         url_with_code = f"{WEBAPP_URL}?start={start_param}"
         await send_and_track(
             ctx, chat_id,
-            rf"🎮 *Запрошення в кімнату* `{start_param}`\!"
-            + "\n\n"
-            + r"Натисни кнопку нижче, щоб приєднатись до гри\.",
+            rf"Запрошення в кімнату `{start_param}`\.",
             InlineKeyboardMarkup([[
                 InlineKeyboardButton(
-                    f"🎭  Зайти в кімнату {start_param}",
+                    f"Зайти →",
                     web_app=WebAppInfo(url=url_with_code),
                 )
             ]]),
@@ -321,11 +284,9 @@ async def cmd_play(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     await _cmd_handler(
         update, ctx,
-        r"🎮 *Натисни щоб відкрити гру\!*"
-        + "\n\n"
-        + r"Створи нову кімнату або приєднайся за кодом\.",
+        r"*Мафія*\. Натисни щоб почати\.",
         InlineKeyboardMarkup([[
-            InlineKeyboardButton("🎭  Грати зараз", web_app=WebAppInfo(url=WEBAPP_URL))
+            InlineKeyboardButton("Грати →", web_app=WebAppInfo(url=WEBAPP_URL))
         ]]),
     )
 
