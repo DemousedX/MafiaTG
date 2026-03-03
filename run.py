@@ -15,6 +15,8 @@ from telegram import (
     BotCommand,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
     Update,
     WebAppInfo,
 )
@@ -47,40 +49,16 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # ─────────────────────────────────────────────
 # ТРЕКЕР ПОВІДОМЛЕНЬ
-# Використовуємо context.chat_data (вбудований PTB сховище),
-# щоб ID не губились між хендлерами.
-# Ключ: "bot_msg_ids" → list[int]
 # ─────────────────────────────────────────────
 _KEY = "bot_msg_ids"
 
 def _track(chat_data: dict, msg_id: int) -> None:
     ids: list = chat_data.setdefault(_KEY, [])
     ids.append(msg_id)
-    # Обмеження: не більше 50 ID на чат
     if len(ids) > 50:
         chat_data[_KEY] = ids[-50:]
 
-async def _clear_menu(ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    """Видалити всі відстежені повідомлення бота в поточному чаті."""
-    ids: list = ctx.chat_data.pop(_KEY, [])
-    if not ids:
-        return
-    # Telegram дозволяє видаляти масово через deleteMessages (Bot API 6.0+)
-    # PTB fallback: видаляємо по одному
-    for msg_id in ids:
-        try:
-            await ctx.bot.delete_message(
-                chat_id=ctx.effective_chat.id if hasattr(ctx, 'effective_chat')
-                       else ctx._chat_id,
-                message_id=msg_id,
-            )
-        except (BadRequest, Forbidden):
-            pass  # вже видалено або немає прав — ок
-        except TelegramError as e:
-            log.debug(f"delete_message {msg_id}: {e}")
-
 async def _clear_menu_by_chat(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
-    """Видалити всі відстежені повідомлення — версія з явним chat_id."""
     ids: list = ctx.chat_data.pop(_KEY, [])
     for msg_id in ids:
         try:
@@ -91,7 +69,6 @@ async def _clear_menu_by_chat(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int) -> N
             log.debug(f"delete {msg_id}: {e}")
 
 async def safe_delete_msg(bot, chat_id: int, msg_id: int) -> None:
-    """Видалити одне конкретне повідомлення без краша."""
     try:
         await bot.delete_message(chat_id=chat_id, message_id=msg_id)
     except (BadRequest, Forbidden):
@@ -104,6 +81,7 @@ async def send_and_track(
     chat_id: int,
     text: str,
     keyboard: InlineKeyboardMarkup,
+    reply_markup_extra=None,
 ) -> None:
     """Відправити меню і зберегти ID у трекері."""
     try:
@@ -118,86 +96,125 @@ async def send_and_track(
         log.error(f"send_and_track: {e}")
 
 # ─────────────────────────────────────────────
-# ТЕКСТИ
+# PERSISTENT REPLY KEYBOARD (кнопка біля вводу)
+# ─────────────────────────────────────────────
+def kb_play_button(url: str) -> ReplyKeyboardMarkup:
+    """Постійна кнопка 'Грати' біля поля введення повідомлення."""
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton("🎭  Грати", web_app=WebAppInfo(url=url))]],
+        resize_keyboard=True,
+        is_persistent=True,
+        input_field_placeholder="Відкрий гру або введи /help",
+    )
+
+async def ensure_play_button(ctx: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+    """Надіслати невидиме повідомлення щоб встановити reply keyboard."""
+    if not WEBAPP_URL:
+        return
+    try:
+        sent = await ctx.bot.send_message(
+            chat_id=chat_id,
+            text="​",   # zero-width space — майже невидимо
+            reply_markup=kb_play_button(WEBAPP_URL),
+        )
+        # Одразу видаляємо це технічне повідомлення
+        await safe_delete_msg(ctx.bot, chat_id, sent.message_id)
+    except TelegramError as e:
+        log.debug(f"ensure_play_button: {e}")
+
+# ─────────────────────────────────────────────
+# ТЕКСТИ — оновлений дизайн
 # ─────────────────────────────────────────────
 WELCOME_TEXT = r"""
-🎭 *Вітаємо у Мафії\!*
+🎭 *МАФІЯ* — соціальна гра для Telegram
 
-Класична соціальна гра для *4–20 гравців* прямо в Telegram\.
+━━━━━━━━━━━━━━━━━━━
+👥 *4–20 гравців*
+🎲 *Таємні ролі*
+🌙 *Ніч та день*
+━━━━━━━━━━━━━━━━━━━
 
-Оберіть дію нижче:
+Створи кімнату або приєднайся до друзів\!
 """.strip()
 
 HELP_TEXT = r"""
 📖 *Як грати у Мафію*
 
-*Ролі:*
+━━━━━━━━━━━━━━━━━━━
+🎭 *Ролі гравців*
+━━━━━━━━━━━━━━━━━━━
 🔫 *Мафія* — вбиває одного гравця щоночі
-⭐ *Шериф* — перевіряє одного гравця щоночі
-💊 *Лікар* — рятує одного гравця щоночі
-🏘️ *Мирний* — виявляє мафію голосуванням
+⭐ *Шериф* — перевіряє підозрюваних вночі
+💊 *Лікар* — рятує когось від смерті вночі
+🏘️ *Мирний* — знаходить мафію голосуванням
 
-*Хід гри:*
-1️⃣ Збери 4–20 гравців, поділись кодом кімнати
-2️⃣ Хост натискає "Почати гру"
+━━━━━━━━━━━━━━━━━━━
+🔄 *Хід гри*
+━━━━━━━━━━━━━━━━━━━
+1️⃣ Збери 4–20 гравців, поділись кодом
+2️⃣ Хост натискає *«Почати гру»*
 3️⃣ Всі отримують таємні ролі
-4️⃣ Вночі — мафія діє потай
-5️⃣ Вдень — обговорення та голосування
-6️⃣ Мирні перемагають, знищивши всю мафію
-7️⃣ Мафія перемагає, зрівнявшись з мирними
+4️⃣ 🌙 *Ніч* — мафія та ролі діють потай
+5️⃣ ☀️ *День* — обговорення та голосування
+6️⃣ Гра триває до перемоги однієї зі сторін
 
-*Команди:*
-/start — Головне меню
-/play — Відкрити гру
-/rules — Правила
-/stats — Статистика сервера
-/help — Довідка
+━━━━━━━━━━━━━━━━━━━
+🏆 *Перемога*
+━━━━━━━━━━━━━━━━━━━
+🕊️ *Мирні* — знищують всю мафію
+🔫 *Мафія* — зрівнюється з мирними
 """.strip()
 
 RULES_TEXT = r"""
 📜 *Правила гри*
 
-🌙 *Вночі:*
-— Всі "засипають"
-— Мафія обирає жертву \(або пропускає\)
-— Шериф перевіряє одного гравця
-— Лікар рятує одного гравця
+━━━━━━━━━━━━━━━━━━━
+🌙 *Нічна фаза*
+━━━━━━━━━━━━━━━━━━━
+😴 Мирні засипають
+🔫 Мафія обирає жертву \(або пропускає\)
+⭐ Шериф перевіряє одного гравця
+💊 Лікар рятує одного гравця
 
-☀️ *Вдень:*
-— Всі дізнаються результати ночі
-— 1 хвилина обговорення в чаті
-— Голосування за підозрюваного
-— Більшість голосів — гравець вибуває
+━━━━━━━━━━━━━━━━━━━
+☀️ *Денна фаза*
+━━━━━━━━━━━━━━━━━━━
+📢 Всі дізнаються результати ночі
+💬 1 хвилина обговорення в чаті
+🗳️ Голосування за підозрюваного
+☠️ Більшість голосів — гравець вибуває
 
-⚖️ *Умови перемоги:*
-— 🕊️ *Мирні:* знищити всю мафію
-— 🔫 *Мафія:* зрівнятись або перевищити к\-сть мирних
+━━━━━━━━━━━━━━━━━━━
+⚖️ *Умови перемоги*
+━━━━━━━━━━━━━━━━━━━
+🕊️ *Мирні* — знищити всю мафію
+🔫 *Мафія* — зрівнятись із мирними
 
-🎭 *Мінімум 4 гравці для початку гри\.*
+🎭 *Мінімум 4 гравці для старту\.*
 """.strip()
 
 # ─────────────────────────────────────────────
-# КЛАВІАТУРИ
+# INLINE КЛАВІАТУРИ
 # ─────────────────────────────────────────────
 def kb_main(url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎮 Відкрити гру", web_app=WebAppInfo(url=url))],
+        [InlineKeyboardButton("🎮  Відкрити гру", web_app=WebAppInfo(url=url))],
         [
-            InlineKeyboardButton("📖 Як грати", callback_data="help"),
-            InlineKeyboardButton("📜 Правила",  callback_data="rules"),
+            InlineKeyboardButton("📖  Як грати",  callback_data="help"),
+            InlineKeyboardButton("📜  Правила",   callback_data="rules"),
         ],
-        [InlineKeyboardButton("📊 Статистика", callback_data="stats")],
+        [InlineKeyboardButton("📊  Статистика", callback_data="stats")],
     ])
 
 def kb_back() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("← Назад до меню", callback_data="main")]
+        [InlineKeyboardButton("← Назад", callback_data="main")]
     ])
 
 def kb_back_play(url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎮 Грати", web_app=WebAppInfo(url=url))],
-        [InlineKeyboardButton("← Назад до меню", callback_data="main")],
+        [InlineKeyboardButton("🎮  Грати зараз", web_app=WebAppInfo(url=url))],
+        [InlineKeyboardButton("← Назад",         callback_data="main")],
     ])
 
 # ─────────────────────────────────────────────
@@ -218,17 +235,25 @@ async def fetch_stats() -> dict:
     return {"rooms": 0, "players": 0, "games": 0}
 
 def build_stats_text(data: dict) -> str:
+    rooms   = data.get("rooms", 0)
+    players = data.get("players", 0)
+    games   = data.get("games", 0)
+    # Статус рядок
+    status = "🟢 Онлайн" if (rooms + players) > 0 else "🟡 Очікування гравців"
     return (
-        r"📊 *Статистика сервера*" + "\n\n"
-        + rf"🏠 *Кімнат активних:* `{data['rooms']}`" + "\n"
-        + rf"👥 *Гравців онлайн:* `{data['players']}`" + "\n"
-        + rf"🎮 *Зіграно ігор:* `{data.get('games', 0)}`"
+        "📊 *Статистика сервера*\n\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        f"🏠 *Кімнат активних:* `{rooms}`\n"
+        f"👥 *Гравців онлайн:*  `{players}`\n"
+        f"🎮 *Зіграно ігор:*    `{games}`\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        f"⚡ *Статус:* {status}"
     )
 
 # ─────────────────────────────────────────────
 # КОМАНДИ
 # Кожна команда:
-#   1. Видаляє саму команду користувача
+#   1. Видаляє саму команду користувача ("/" повідомлення)
 #   2. Видаляє всі попередні повідомлення бота (з трекера)
 #   3. Надсилає нове меню і трекає його ID
 # ─────────────────────────────────────────────
@@ -241,8 +266,9 @@ async def _cmd_handler(
     """Спільна логіка для всіх команд."""
     chat_id = update.effective_chat.id
 
-    # 1. Видалити команду юзера
-    await safe_delete_msg(ctx.bot, chat_id, update.message.message_id)
+    # 1. Видалити команду "/" юзера
+    if update.message:
+        await safe_delete_msg(ctx.bot, chat_id, update.message.message_id)
 
     # 2. Видалити всі попередні повідомлення бота
     await _clear_menu_by_chat(ctx, chat_id)
@@ -254,18 +280,28 @@ async def _cmd_handler(
 async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
 
+    # 1. Завжди видалити команду юзера
+    if update.message:
+        await safe_delete_msg(ctx.bot, chat_id, update.message.message_id)
+
+    # 2. Очистити попередні повідомлення бота
+    await _clear_menu_by_chat(ctx, chat_id)
+
+    # 3. Встановити persistent кнопку "Грати" біля поля вводу
+    await ensure_play_button(ctx, chat_id)
+
     # Якщо start_param — запрошення в кімнату
     start_param = ctx.args[0] if ctx.args else None
     if start_param and start_param.isdigit() and len(start_param) == 5:
-        await safe_delete_msg(ctx.bot, chat_id, update.message.message_id)
-        await _clear_menu_by_chat(ctx, chat_id)
         url_with_code = f"{WEBAPP_URL}?start={start_param}"
         await send_and_track(
             ctx, chat_id,
-            rf"🎮 *Запрошення в кімнату* `{start_param}`\!",
+            rf"🎮 *Запрошення в кімнату* `{start_param}`\!"
+            + "\n\n"
+            + r"Натисни кнопку нижче, щоб приєднатись до гри\.",
             InlineKeyboardMarkup([[
                 InlineKeyboardButton(
-                    f"🎭 Зайти в кімнату {start_param}",
+                    f"🎭  Зайти в кімнату {start_param}",
                     web_app=WebAppInfo(url=url_with_code),
                 )
             ]]),
@@ -273,13 +309,11 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     if not WEBAPP_URL:
-        await safe_delete_msg(ctx.bot, chat_id, update.message.message_id)
-        await _clear_menu_by_chat(ctx, chat_id)
         sent = await ctx.bot.send_message(chat_id, "⚠️ Встанови WEBAPP_URL у .env")
         _track(ctx.chat_data, sent.message_id)
         return
 
-    await _cmd_handler(update, ctx, WELCOME_TEXT, kb_main(WEBAPP_URL))
+    await send_and_track(ctx, chat_id, WELCOME_TEXT, kb_main(WEBAPP_URL))
 
 
 async def cmd_play(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -287,9 +321,11 @@ async def cmd_play(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     await _cmd_handler(
         update, ctx,
-        r"🎮 *Натисни щоб відкрити гру\!*",
+        r"🎮 *Натисни щоб відкрити гру\!*"
+        + "\n\n"
+        + r"Створи нову кімнату або приєднайся за кодом\.",
         InlineKeyboardMarkup([[
-            InlineKeyboardButton("🎭 Грати зараз", web_app=WebAppInfo(url=WEBAPP_URL))
+            InlineKeyboardButton("🎭  Грати зараз", web_app=WebAppInfo(url=WEBAPP_URL))
         ]]),
     )
 
@@ -317,8 +353,6 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 # ─────────────────────────────────────────────
 # CALLBACK — inline кнопки
-# Редагує ПОТОЧНЕ повідомлення (без видалення).
-# Коли клікають "← Назад" — редагує те саме, не надсилає нове.
 # ─────────────────────────────────────────────
 async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     q = update.callback_query
@@ -357,7 +391,7 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await edit(build_stats_text(data), kb_back_play(WEBAPP_URL) if WEBAPP_URL else kb_back())
 
 # ─────────────────────────────────────────────
-# GLOBAL ERROR HANDLER — бот не падає ні від чого
+# GLOBAL ERROR HANDLER
 # ─────────────────────────────────────────────
 async def error_handler(update: object, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     err = ctx.error
@@ -371,7 +405,6 @@ async def error_handler(update: object, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         log.error(f"TelegramError: {err}")
     else:
         log.exception(f"Неочікувана помилка: {err}", exc_info=err)
-    # Не піднімаємо — бот продовжує роботу
 
 # ─────────────────────────────────────────────
 # NODE.JS УПРАВЛІННЯ
@@ -412,9 +445,9 @@ def stop_node_server(proc: subprocess.Popen) -> None:
 # MAIN
 # ─────────────────────────────────────────────
 async def main_async():
-    log.info("=" * 36)
-    log.info("    🎭  MAFIA BOT  STARTING    ")
-    log.info("=" * 36)
+    log.info("=" * 40)
+    log.info("   🎭  MAFIA BOT  STARTING   ")
+    log.info("=" * 40)
 
     if not BOT_TOKEN:
         log.error("❌ BOT_TOKEN не знайдено в .env!")
@@ -435,7 +468,6 @@ async def main_async():
     log.info(f"✅ Node.js PID={_node_process.pid} | порт {SERVER_PORT}")
 
     # 2. Telegram Application
-    # persistence=None — не зберігаємо chat_data на диск (достатньо в пам'яті)
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", cmd_start))
