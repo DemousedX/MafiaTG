@@ -5,58 +5,74 @@ const path = require('path');
 try { require('dotenv').config(); } catch {}
 
 const BOT_USERNAME = process.env.BOT_USERNAME || '';
-const ROOM_TTL = 3 * 60 * 1000; // 3 хв після кінця гри
+const ROOM_TTL = 3 * 60 * 1000;
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/ping', (req, res) => res.json({ status: 'ok', uptime: Math.floor(process.uptime()) }));
+app.get('/health', (req, res) => res.json({ status: 'ok', rooms: rooms.size }));
 
-// ── Keep-alive ping (для UptimeRobot / Render) ──
-app.get('/ping', (req, res) => {
-  res.json({ status: 'ok', uptime: Math.floor(process.uptime()) });
-});
-
-// ── Health check ─────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', rooms: rooms.size });
-});
-
-// ── Stats API (для Telegram бота) ─────────────────
 let gamesPlayed = 0;
-
 app.get('/api/stats', (req, res) => {
   let totalPlayers = 0;
-  rooms.forEach(r => {
-    totalPlayers += r.players.filter(p => p.connected).length;
-  });
+  rooms.forEach(r => { totalPlayers += r.players.filter(p => p.connected).length; });
   res.json({ rooms: rooms.size, players: totalPlayers, games: gamesPlayed });
 });
-
-// Serve index.html for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ─────────────────────────────────────────────
-// GAME STATE
+// ROLE DEFINITIONS
 // ─────────────────────────────────────────────
-const rooms = new Map();
+const ROLE_INFO = {
+  mafia:      { emoji: '🔫', name: 'Мафія',    color: '#e53e3e' },
+  sheriff:    { emoji: '⭐', name: 'Шериф',    color: '#d69e2e' },
+  doctor:     { emoji: '💊', name: 'Лікар',    color: '#38a169' },
+  civilian:   { emoji: '🏘️', name: 'Мирний',  color: '#4a90d9' },
+  prostitute: { emoji: '💃', name: 'Повія',   color: '#ed64a6' },
+  detective:  { emoji: '🕵️', name: 'Детектив',color: '#9f7aea' },
+};
 
-function generateRoomCode() {
-  let code;
-  do { code = String(Math.floor(10000 + Math.random() * 90000)); }
-  while (rooms.has(code));
-  return code;
-}
+// Night turn order (detective is passive — no active turn needed)
+const NIGHT_ORDER = ['mafia', 'prostitute', 'sheriff', 'doctor'];
 
-function getRolePool(count) {
-  if (count <= 5)  return ['mafia', 'sheriff', ...Array(count - 2).fill('civilian')];
-  if (count <= 8)  return ['mafia', 'mafia', 'sheriff', 'doctor', ...Array(count - 4).fill('civilian')];
-  if (count <= 12) return ['mafia', 'mafia', 'mafia', 'sheriff', 'doctor', ...Array(count - 5).fill('civilian')];
-  if (count <= 16) return ['mafia', 'mafia', 'mafia', 'mafia', 'sheriff', 'doctor', ...Array(count - 6).fill('civilian')];
-  return ['mafia', 'mafia', 'mafia', 'mafia', 'mafia', 'sheriff', 'doctor', ...Array(count - 7).fill('civilian')];
+// ─────────────────────────────────────────────
+// ROLE POOL
+// ─────────────────────────────────────────────
+function getRolePool(count, settings = {}) {
+  const roles = settings.roles || {};
+  const useSheriff    = roles.sheriff    !== false;
+  const useDoctor     = roles.doctor     !== false;
+  const useProstitute = roles.prostitute !== false;
+  const useDetective  = roles.detective  !== false;
+
+  // Base mafia count
+  let mafiaCount;
+  if (count <= 5)       mafiaCount = 1;
+  else if (count <= 8)  mafiaCount = 2;
+  else if (count <= 12) mafiaCount = 3;
+  else if (count <= 16) mafiaCount = 4;
+  else                  mafiaCount = 5;
+
+  const pool = Array(mafiaCount).fill('mafia');
+  const specials = [];
+  if (useSheriff)                        specials.push('sheriff');
+  if (useDoctor     && count >= 6)       specials.push('doctor');
+  if (useProstitute && count >= 6)       specials.push('prostitute');
+  if (useDetective  && count >= 7)       specials.push('detective');
+
+  // Fill rest with civilians
+  const civCount = count - mafiaCount - specials.length;
+  if (civCount < 0) {
+    // Too many specials — drop last ones
+    specials.splice(specials.length + civCount);
+    pool.push(...specials, ...Array(0).fill('civilian'));
+  } else {
+    pool.push(...specials, ...Array(civCount).fill('civilian'));
+  }
+  return pool;
 }
 
 function shuffle(arr) {
@@ -68,40 +84,58 @@ function shuffle(arr) {
   return a;
 }
 
-const ROLE_INFO = {
-  mafia:    { emoji: '🔫', name: 'Мафія',     color: '#e53e3e', desc: 'Кожну ніч обирайте жертву. Перемагаєте, коли рівні мирним.' },
-  sheriff:  { emoji: '⭐', name: 'Шериф',     color: '#d69e2e', desc: 'Кожну ніч перевіряйте одного гравця — мафія чи ні.' },
-  doctor:   { emoji: '💊', name: 'Лікар',     color: '#38a169', desc: 'Кожну ніч рятуйте одного гравця від смерті. Можна себе!' },
-  civilian: { emoji: '🏘️', name: 'Мирний',   color: '#4a90d9', desc: 'Вдень переконуйте та голосуйте проти мафії.' },
-};
+// ─────────────────────────────────────────────
+// ROOM FACTORY
+// ─────────────────────────────────────────────
+const rooms = new Map();
+
+function generateRoomCode() {
+  let code;
+  do { code = String(Math.floor(10000 + Math.random() * 90000)); }
+  while (rooms.has(code));
+  return code;
+}
+
+function createRoom() {
+  return {
+    code: '', phase: 'lobby', night: 0,
+    players: [], messages: [], nightLog: [],
+    votes: {}, mafiaVotes: {}, nightActed: {},
+    mafiaTarget: null, doctorTarget: null, sheriffTarget: null,
+    prostituteTarget: null,
+    phaseTime: 0, winner: null, nightTurn: null,
+    suspects: {},   // { voterId: targetId }
+    settings: {
+      fastMode: false,
+      roles: { prostitute: true, detective: true, sheriff: true, doctor: true },
+      dayDuration: 60,
+    },
+    _timers: [],
+  };
+}
+
+function clearTimers(room) { room._timers.forEach(t => clearTimeout(t)); room._timers = []; }
+function delay(room, fn, ms) { const t = setTimeout(fn, ms); room._timers.push(t); return t; }
 
 // ─────────────────────────────────────────────
 // BROADCAST HELPERS
 // ─────────────────────────────────────────────
-function send(ws, msg) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg));
-  }
-}
-
-function broadcast(room, msg) {
-  room.players.forEach(p => send(p.ws, msg));
-}
-
-function broadcastExcept(room, msg, excludeId) {
-  room.players.filter(p => p.id !== excludeId).forEach(p => send(p.ws, msg));
-}
-
-function sendPrivate(room, id, msg) {
-  const p = room.players.find(p => p.id === id);
-  if (p) send(p.ws, msg);
-}
+function send(ws, msg) { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
+function broadcast(room, msg) { room.players.forEach(p => send(p.ws, msg)); }
+function broadcastExcept(room, msg, excludeId) { room.players.filter(p => p.id !== excludeId).forEach(p => send(p.ws, msg)); }
+function sendPrivate(room, id, msg) { const p = room.players.find(p => p.id === id); if (p) send(p.ws, msg); }
 
 // ─────────────────────────────────────────────
-// STATE SNAPSHOT
+// SNAPSHOT
 // ─────────────────────────────────────────────
 function getSnapshot(room, forPlayerId) {
   const me = room.players.find(p => p.id === forPlayerId);
+
+  // Aggregate suspect counts → array of suspected playerIds (with ≥1 token)
+  const suspectCounts = {};
+  Object.values(room.suspects).forEach(tid => { if (tid) suspectCounts[tid] = (suspectCounts[tid] || 0) + 1; });
+  const suspectedIds = Object.keys(suspectCounts).filter(id => suspectCounts[id] > 0);
+
   return {
     type: 'snapshot',
     phase: room.phase,
@@ -112,14 +146,9 @@ function getSnapshot(room, forPlayerId) {
     myRole: me?.role || null,
     myAlive: me?.alive !== false,
     players: room.players.map(p => ({
-      id: p.id,
-      name: p.name,
-      alive: p.alive,
-      isHost: p.isHost,
-      connected: p.connected,
-      voted: room.votes[p.id] !== undefined,
-      avatarUrl: p.avatarUrl || '',
-      tgVerified: p.tgVerified || false,
+      id: p.id, name: p.name, alive: p.alive, isHost: p.isHost,
+      connected: p.connected, voted: room.votes[p.id] !== undefined,
+      avatarUrl: p.avatarUrl || '', tgVerified: p.tgVerified || false,
     })),
     messages: room.messages,
     nightLog: room.nightLog,
@@ -129,68 +158,59 @@ function getSnapshot(room, forPlayerId) {
     nightTurn: room.nightTurn || null,
     winner: room.winner,
     revealedRoles: room.winner ? room.players.map(p => ({ id: p.id, role: p.role })) : [],
+    suspects: suspectedIds,
+    settings: room.settings,
   };
 }
 
-function broadcastState(room) {
-  room.players.forEach(p => send(p.ws, getSnapshot(room, p.id)));
+function broadcastState(room) { room.players.forEach(p => send(p.ws, getSnapshot(room, p.id))); }
+
+// ─────────────────────────────────────────────
+// NIGHT HELPERS
+// ─────────────────────────────────────────────
+function getAlive(room) { return room.players.filter(p => p.alive); }
+
+function getActiveNightOrder(room) {
+  const alive = getAlive(room);
+  const { roles = {} } = room.settings;
+  return NIGHT_ORDER.filter(role => {
+    if (roles[role] === false) return false;
+    return alive.some(p => p.role === role);
+  });
+}
+
+function findFirstNightRole(room) { return getActiveNightOrder(room)[0] || null; }
+function findNextNightRole(room, current) {
+  const order = getActiveNightOrder(room);
+  const idx = order.indexOf(current);
+  if (idx === -1 || idx === order.length - 1) return null;
+  return order[idx + 1];
 }
 
 // ─────────────────────────────────────────────
-// GAME LOGIC
+// COUNTDOWN
 // ─────────────────────────────────────────────
-function createRoom() {
-  return {
-    code: '', phase: 'lobby', night: 0,
-    players: [], messages: [], nightLog: [],
-    votes: {}, mafiaVotes: {}, nightActed: {},
-    mafiaTarget: null, doctorTarget: null, sheriffTarget: null,
-    phaseTime: 0, winner: null,
-    _timers: [],
-  };
-}
-
-function clearTimers(room) {
-  room._timers.forEach(t => clearTimeout(t));
-  room._timers = [];
-}
-
-function delay(room, fn, ms) {
-  const t = setTimeout(fn, ms);
-  room._timers.push(t);
-  return t;
-}
-
 function startCountdown(room, seconds, onEnd) {
-  room.phaseTime = seconds;
+  const fast = room.settings?.fastMode;
+  room.phaseTime = fast ? Math.ceil(seconds * 0.6) : seconds;
   const tick = () => {
     broadcast(room, { type: 'tick', time: room.phaseTime });
     if (room.phaseTime <= 0) { onEnd(); return; }
     room.phaseTime--;
-    const t = setTimeout(tick, 1000);
-    room._timers.push(t);
+    room._timers.push(setTimeout(tick, 1000));
   };
   tick();
 }
 
-function assignRoles(room) {
-  const pool = shuffle(getRolePool(room.players.length));
-  room.players.forEach((p, i) => {
-    p.role = pool[i];
-    p.alive = true;
-  });
-}
-
-function getAlive(room) { return room.players.filter(p => p.alive); }
-function getMafia(room) { return getAlive(room).filter(p => p.role === 'mafia'); }
-
+// ─────────────────────────────────────────────
+// WIN CHECK
+// ─────────────────────────────────────────────
 function checkWin(room) {
   const alive = getAlive(room);
   const mafiaCount = alive.filter(p => p.role === 'mafia').length;
-  const civCount = alive.filter(p => p.role !== 'mafia').length;
-
-  if (mafiaCount === 0) { endGame(room, 'civilians'); return true; }
-  if (mafiaCount >= civCount) { endGame(room, 'mafia'); return true; }
+  const civCount   = alive.filter(p => p.role !== 'mafia').length;
+  if (mafiaCount === 0)        { endGame(room, 'civilians'); return true; }
+  if (mafiaCount >= civCount)  { endGame(room, 'mafia');     return true; }
   return false;
 }
 
@@ -201,63 +221,25 @@ function endGame(room, winner) {
   gamesPlayed++;
   broadcastState(room);
   broadcast(room, {
-    type: 'game_over',
-    winner,
-    message: winner === 'civilians'
-      ? '🎉 Мирні перемогли! Мафія знищена!'
-      : '🔫 Мафія перемогла! Місто захоплено!',
-    players: room.players.map(p => ({ id: p.id, name: p.name, role: p.role, alive: p.alive, avatarUrl: p.avatarUrl || '', tgVerified: p.tgVerified || false })),
+    type: 'game_over', winner,
+    message: winner === 'civilians' ? '🎉 Мирні перемогли! Мафія знищена!' : '🔫 Мафія перемогла! Місто захоплено!',
+    players: room.players.map(p => ({
+      id: p.id, name: p.name, role: p.role, alive: p.alive,
+      avatarUrl: p.avatarUrl || '', tgVerified: p.tgVerified || false,
+    })),
   });
-  // Перевести в стан finished; видалити після ROOM_TTL якщо не перезапущено
   room.phase = 'finished';
   room._deleteTimer = setTimeout(() => {
-    if (rooms.has(room.code)) {
-      rooms.delete(room.code);
-      console.log(`[room] ${room.code} deleted after game`);
-    }
+    if (rooms.has(room.code)) { rooms.delete(room.code); console.log(`[room] ${room.code} deleted`); }
   }, ROOM_TTL);
 }
 
-// ─── NIGHT ───────────────────────────────────
-// Знайти першу роль у черзі (mafia → sheriff → doctor)
-function findFirstNightRole(room) {
-  const alive = getAlive(room);
-  for (const role of ['mafia', 'sheriff', 'doctor']) {
-    if (alive.some(p => p.role === role)) return role;
-  }
-  return null;
-}
-
-// Знайти наступну роль після current
-function findNextNightRole(room, current) {
-  const order = ['mafia', 'sheriff', 'doctor'];
-  const idx = order.indexOf(current);
-  if (idx === -1) return null;
-  const alive = getAlive(room);
-  for (let i = idx + 1; i < order.length; i++) {
-    if (alive.some(p => p.role === order[i])) return order[i];
-  }
-  return null;
-}
-
-// Перейти до наступного ходу або завершити ніч
-function advanceNightTurn(room) {
-  const next = findNextNightRole(room, room.nightTurn);
-  if (next) {
-    room.nightTurn = next;
-    broadcast(room, { type: 'night_turn', from: room.nightTurn === next ? null : room.nightTurn, to: next, prev: getPrevRole(room.nightTurn) });
-    broadcastState(room);
-  } else {
-    // Всі ролі відіграли — завершуємо ніч через 1с
-    clearTimers(room);
-    delay(room, () => endNight(room), 1000);
-  }
-}
-
-function getPrevRole(current) {
-  const order = ['mafia', 'sheriff', 'doctor'];
-  const idx = order.indexOf(current);
-  return idx > 0 ? order[idx - 1] : null;
+// ─────────────────────────────────────────────
+// NIGHT PHASE
+// ─────────────────────────────────────────────
+function assignRoles(room) {
+  const pool = shuffle(getRolePool(room.players.length, room.settings));
+  room.players.forEach((p, i) => { p.role = pool[i]; p.alive = true; });
 }
 
 function startNight(room) {
@@ -267,9 +249,11 @@ function startNight(room) {
   room.mafiaTarget = null;
   room.doctorTarget = null;
   room.sheriffTarget = null;
+  room.prostituteTarget = null;
   room.mafiaVotes = {};
   room.nightActed = {};
   room.nightLog = [];
+  room.suspects = {}; // reset suspect tokens each round
 
   const firstTurn = findFirstNightRole(room);
   room.nightTurn = firstTurn;
@@ -277,18 +261,13 @@ function startNight(room) {
   broadcast(room, { type: 'phase', phase: 'night', night: room.night, turn: firstTurn });
   broadcastState(room);
 
-  // Загальний таймаут на всю ніч (90с = 30с × 3 ролі)
-  startCountdown(room, 90, () => endNight(room));
-}
-
-// Перевірка чи всі ролі відіграли (залишена для сумісності)
-function allNightActed(room) {
-  return !findNextNightRole(room, room.nightTurn || 'doctor');
+  const nightDuration = room.settings?.fastMode ? 60 : 120;
+  startCountdown(room, nightDuration, () => endNight(room));
 }
 
 function resolveMafiaVote(room) {
   const counts = {};
-  Object.values(room.mafiaVotes).forEach(id => { counts[id] = (counts[id] || 0) + 1; });
+  Object.values(room.mafiaVotes).forEach(id => { if (id) counts[id] = (counts[id] || 0) + 1; });
   let best = null, max = 0;
   Object.entries(counts).forEach(([id, n]) => { if (n > max) { max = n; best = id; } });
   return best;
@@ -298,27 +277,69 @@ function endNight(room) {
   clearTimers(room);
   const log = [];
 
-  // Resolve mafia target from votes
+  // Finalize mafia target from votes
   if (Object.keys(room.mafiaVotes).length > 0) {
     room.mafiaTarget = resolveMafiaVote(room);
   }
 
-  // Mafia kill
+  // ── Prostitute blocking logic ──────────────
+  const prostTarget = room.prostituteTarget;
+  if (prostTarget) {
+    const prostitute = room.players.find(p => p.role === 'prostitute' && p.alive);
+    if (prostitute) {
+      // If mafia targeted the prostitute herself → mafia is blocked
+      if (room.mafiaTarget === prostitute.id) {
+        room.mafiaTarget = null;
+        log.push({ emoji: '💃', text: 'Повія відвернула мафію від своїх планів!' });
+      }
+      // Block sheriff action if prostitute visited sheriff's target
+      const sheriffPlayer = getAlive(room).find(p => p.role === 'sheriff');
+      if (sheriffPlayer && prostTarget === sheriffPlayer.id) {
+        room.sheriffTarget = null;
+        sendPrivate(room, sheriffPlayer.id, { type: 'action_blocked' });
+      }
+      // Block doctor action if prostitute visited doctor
+      const doctorPlayer = getAlive(room).find(p => p.role === 'doctor');
+      if (doctorPlayer && prostTarget === doctorPlayer.id) {
+        room.doctorTarget = null;
+        sendPrivate(room, doctorPlayer.id, { type: 'action_blocked' });
+      }
+      // If prostitute visited a mafia member → remove that member's vote
+      const prostTargetPlayer = room.players.find(p => p.id === prostTarget);
+      if (prostTargetPlayer?.role === 'mafia') {
+        // Find which mafia player this is and void their vote
+        delete room.mafiaVotes[prostTarget];
+        room.mafiaTarget = resolveMafiaVote(room) || null;
+      }
+    }
+  }
+
+  // ── Mafia kill ─────────────────────────────
   if (room.mafiaTarget) {
     const target = room.players.find(p => p.id === room.mafiaTarget);
     if (target?.alive) {
       if (room.doctorTarget === room.mafiaTarget) {
-        log.push({ emoji: '🏥', text: `Лікар врятував гравця цієї ночі!` });
+        log.push({ emoji: '🏥', text: 'Лікар врятував гравця цієї ночі!' });
       } else {
         target.alive = false;
         log.push({ emoji: '💀', text: `${target.name} був вбитий мафією!` });
+
+        // Detective learns role of killed player
+        const detective = getAlive(room).find(p => p.role === 'detective');
+        if (detective) {
+          sendPrivate(room, detective.id, {
+            type: 'detective_result',
+            name: target.name,
+            role: target.role,
+          });
+        }
       }
     }
   } else {
     log.push({ emoji: '😴', text: 'Мафія нікого не вбила цієї ночі.' });
   }
 
-  // Sheriff check — private
+  // ── Sheriff private check ──────────────────
   if (room.sheriffTarget) {
     const target = room.players.find(p => p.id === room.sheriffTarget);
     const sheriff = getAlive(room).find(p => p.role === 'sheriff');
@@ -338,38 +359,40 @@ function endNight(room) {
 
   if (checkWin(room)) return;
 
-  delay(room, () => startDay(room), 6000);
+  const dawnDelay = room.settings?.fastMode ? 3000 : 6000;
+  delay(room, () => startDay(room), dawnDelay);
 }
 
-// ─── DAY ─────────────────────────────────────
+// ─────────────────────────────────────────────
+// DAY PHASE
+// ─────────────────────────────────────────────
 function startDay(room) {
   clearTimers(room);
   room.phase = 'day';
   room.votes = {};
   room.messages = [];
+  // suspects reset at start of night, keep visible during day
 
   broadcast(room, { type: 'phase', phase: 'day' });
   broadcastState(room);
 
-  // After 60s → switch to voting
-  startCountdown(room, 120, () => endVoting(room));
+  const dayDuration = room.settings?.fastMode ? 40 : (room.settings?.dayDuration || 60);
+  startCountdown(room, dayDuration * 2, () => endVoting(room));
 
+  // Switch to voting halfway
   delay(room, () => {
     if (room.phase === 'day') {
       room.phase = 'voting';
       broadcast(room, { type: 'phase', phase: 'voting' });
       broadcastState(room);
     }
-  }, 60000);
+  }, dayDuration * 1000);
 }
 
 function endVoting(room) {
   clearTimers(room);
-
   const counts = {};
-  Object.values(room.votes).forEach(id => {
-    if (id !== null) counts[id] = (counts[id] || 0) + 1;
-  });
+  Object.values(room.votes).forEach(id => { if (id !== null) counts[id] = (counts[id] || 0) + 1; });
 
   let eliminated = null, max = 0;
   Object.entries(counts).forEach(([id, n]) => { if (n > max) { max = n; eliminated = id; } });
@@ -379,19 +402,22 @@ function endVoting(room) {
     if (p) {
       p.alive = false;
       broadcast(room, {
-        type: 'eliminated',
-        id: eliminated,
-        name: p.name,
-        role: p.role,
-        message: `⚖️ ${p.name} (${ROLE_INFO[p.role].name}) виключений голосуванням!`,
+        type: 'eliminated', id: eliminated, name: p.name, role: p.role,
+        message: `⚖️ ${p.name} (${ROLE_INFO[p.role]?.name || p.role}) виключений голосуванням!`,
       });
+      // Detective learns role of eliminated player
+      const detective = getAlive(room).find(pp => pp.role === 'detective');
+      if (detective) {
+        sendPrivate(room, detective.id, { type: 'detective_result', name: p.name, role: p.role });
+      }
     }
   } else {
     broadcast(room, { type: 'no_elimination', message: '🤷 Голосування не визначило підозрюваного.' });
   }
 
   if (checkWin(room)) return;
-  delay(room, () => startNight(room), 3000);
+  const nightDelay = room.settings?.fastMode ? 2000 : 3000;
+  delay(room, () => startNight(room), nightDelay);
 }
 
 // ─────────────────────────────────────────────
@@ -401,10 +427,7 @@ wss.on('connection', (ws) => {
   let myId = null;
   let myRoomCode = null;
 
-  // Keep-alive ping
-  const pingInterval = setInterval(() => {
-    if (ws.readyState === WebSocket.OPEN) ws.ping();
-  }, 25000);
+  const pingInterval = setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.ping(); }, 25000);
 
   ws.on('close', () => {
     clearInterval(pingInterval);
@@ -412,17 +435,14 @@ wss.on('connection', (ws) => {
     if (!room) return;
     const me = room.players.find(p => p.id === myId);
     if (me) {
-      me.connected = false;
-      me.ws = null;
+      me.connected = false; me.ws = null;
       broadcastExcept(room, { type: 'player_disconnected', id: myId, name: me.name }, myId);
       broadcastState(room);
     }
   });
 
   ws.on('message', (raw) => {
-    let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
-
+    let msg; try { msg = JSON.parse(raw); } catch { return; }
     const room = rooms.get(myRoomCode);
     const me = room?.players.find(p => p.id === myId);
 
@@ -434,18 +454,13 @@ wss.on('connection', (ws) => {
         const code = generateRoomCode();
         const newRoom = createRoom();
         newRoom.code = code;
-
         myId = 'p_' + Math.random().toString(36).slice(2);
         myRoomCode = code;
-
         newRoom.players.push({
-          id: myId, name, role: null,
-          alive: true, isHost: true,
-          connected: true, ws,
+          id: myId, name, role: null, alive: true, isHost: true, connected: true, ws,
           avatarUrl: String(msg.avatarUrl || '').slice(0, 300),
           tgVerified: !!msg.tgVerified,
         });
-
         rooms.set(code, newRoom);
         send(ws, { type: 'joined', id: myId, code, isHost: true, botUsername: BOT_USERNAME });
         broadcastState(newRoom);
@@ -456,26 +471,20 @@ wss.on('connection', (ws) => {
       case 'join_room': {
         const code = String(msg.code).trim();
         const joinRoom = rooms.get(code);
+        if (!joinRoom) { send(ws, { type: 'error', msg: 'Кімнату не знайдено 🔍' }); return; }
 
-        if (!joinRoom) {
-          send(ws, { type: 'error', msg: 'Кімнату не знайдено 🔍' }); return;
-        }
         if (joinRoom.phase !== 'lobby') {
-          // Try reconnect by name (allow in finished state too for results viewing)
+          // Try reconnect
           const existing = joinRoom.players.find(p => p.name === msg.name?.trim() && !p._left);
           if (existing) {
-            existing.ws = ws;
-            existing.connected = true;
-            // Оновити аватар якщо передано новий
+            existing.ws = ws; existing.connected = true;
             if (msg.avatarUrl) existing.avatarUrl = String(msg.avatarUrl).slice(0, 300);
-            myId = existing.id;
-            myRoomCode = code;
+            myId = existing.id; myRoomCode = code;
             send(ws, { type: 'joined', id: myId, code, isHost: existing.isHost, botUsername: BOT_USERNAME, reconnecting: true });
-            // Resend private role info
             send(ws, { type: 'your_role', role: existing.role });
             if (existing.role === 'mafia') {
-              const mafiaIds = joinRoom.players.filter(p => p.role === 'mafia').map(p => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl||'' }));
-              send(ws, { type: 'mafia_team', team: mafiaIds });
+              const team = joinRoom.players.filter(p => p.role === 'mafia').map(p => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl || '' }));
+              send(ws, { type: 'mafia_team', team });
             }
             send(ws, getSnapshot(joinRoom, myId));
             broadcast(joinRoom, { type: 'player_reconnected', id: myId, name: existing.name });
@@ -484,26 +493,18 @@ wss.on('connection', (ws) => {
           }
           send(ws, { type: 'error', msg: 'Гра вже розпочалась 🎮' }); return;
         }
-        if (joinRoom.players.length >= 20) {
-          send(ws, { type: 'error', msg: 'Кімната заповнена (макс. 20) 😔' }); return;
-        }
 
+        if (joinRoom.players.length >= 20) { send(ws, { type: 'error', msg: 'Кімната заповнена (макс. 20) 😔' }); return; }
         const name = (msg.name || 'Гравець').slice(0, 20);
-        if (joinRoom.players.some(p => p.name === name)) {
-          send(ws, { type: 'error', msg: 'Це ім\'я вже зайнято 👤' }); return;
-        }
+        if (joinRoom.players.some(p => p.name === name)) { send(ws, { type: 'error', msg: "Це ім'я вже зайнято 👤" }); return; }
 
         myId = 'p_' + Math.random().toString(36).slice(2);
         myRoomCode = code;
-
         joinRoom.players.push({
-          id: myId, name, role: null,
-          alive: true, isHost: false,
-          connected: true, ws,
+          id: myId, name, role: null, alive: true, isHost: false, connected: true, ws,
           avatarUrl: String(msg.avatarUrl || '').slice(0, 300),
           tgVerified: !!msg.tgVerified,
         });
-
         send(ws, { type: 'joined', id: myId, code, isHost: false, botUsername: BOT_USERNAME });
         broadcast(joinRoom, { type: 'player_joined', id: myId, name });
         broadcastState(joinRoom);
@@ -513,24 +514,17 @@ wss.on('connection', (ws) => {
       // ── START GAME ──────────────────────────
       case 'start_game': {
         if (!room || !me?.isHost || room.phase !== 'lobby') return;
-        if (room.players.length < 4) {
-          send(ws, { type: 'error', msg: 'Потрібно мінімум 4 гравці! 👥' }); return;
-        }
+        if (room.players.length < 4) { send(ws, { type: 'error', msg: 'Потрібно мінімум 4 гравці! 👥' }); return; }
 
         assignRoles(room);
-        // Tell each player their role privately
-        room.players.forEach(p => {
-          sendPrivate(room, p.id, { type: 'your_role', role: p.role });
-        });
+        room.players.forEach(p => sendPrivate(room, p.id, { type: 'your_role', role: p.role }));
 
-        // Share mafia team info
-        const mafiaIds = room.players.filter(p => p.role === 'mafia').map(p => ({ id: p.id, name: p.name }));
-        room.players.filter(p => p.role === 'mafia').forEach(p => {
-          sendPrivate(room, p.id, { type: 'mafia_team', team: mafiaIds });
-        });
+        const mafiaIds = room.players.filter(p => p.role === 'mafia').map(p => ({ id: p.id, name: p.name, avatarUrl: p.avatarUrl || '' }));
+        room.players.filter(p => p.role === 'mafia').forEach(p => sendPrivate(room, p.id, { type: 'mafia_team', team: mafiaIds }));
 
         broadcast(room, { type: 'game_starting' });
-        delay(room, () => startNight(room), 8000); // 8s = час для кінематика розкриття ролі
+        const startDelay = room.settings?.fastMode ? 5000 : 8000;
+        delay(room, () => startNight(room), startDelay);
         broadcastState(room);
         break;
       }
@@ -538,23 +532,29 @@ wss.on('connection', (ws) => {
       // ── NIGHT ACTION ────────────────────────
       case 'night_action': {
         if (!room || !me?.alive || room.phase !== 'night') return;
-        // Перевіряємо що зараз черга цієї ролі
         if (room.nightTurn !== me.role) return;
-        // Якщо роль вже відіграла — ігноруємо
         if (room.nightActed[me.role]) return;
 
-        const targetId = msg.targetId || null; // null = пропустити
+        const targetId = msg.targetId || null;
 
         if (me.role === 'mafia') {
           room.mafiaVotes[myId] = targetId;
           room.mafiaTarget = resolveMafiaVote(room);
-          // Оновити знімок для мафії
           room.players.filter(p => p.role === 'mafia').forEach(p => send(p.ws, getSnapshot(room, p.id)));
-          // Якщо всі мафіозі проголосували → роль відіграна
           const aliveMafia = getAlive(room).filter(p => p.role === 'mafia');
-          const allMafiaVoted = aliveMafia.every(p => room.mafiaVotes[p.id] !== undefined);
-          if (!allMafiaVoted) { send(ws, { type: 'night_acted' }); break; } // Чекаємо інших мафіозі
+          if (!aliveMafia.every(p => room.mafiaVotes[p.id] !== undefined)) {
+            send(ws, { type: 'night_acted' }); break;
+          }
           room.nightActed['mafia'] = true;
+
+        } else if (me.role === 'prostitute') {
+          if (targetId) {
+            const t = room.players.find(p => p.id === targetId && p.alive);
+            if (!t) return;
+            room.prostituteTarget = targetId;
+          }
+          room.nightActed['prostitute'] = true;
+
         } else if (me.role === 'sheriff') {
           if (targetId) {
             const t = room.players.find(p => p.id === targetId && p.alive);
@@ -562,6 +562,7 @@ wss.on('connection', (ws) => {
             room.sheriffTarget = targetId;
           }
           room.nightActed['sheriff'] = true;
+
         } else if (me.role === 'doctor') {
           if (targetId) {
             const t = room.players.find(p => p.id === targetId && p.alive);
@@ -569,22 +570,23 @@ wss.on('connection', (ws) => {
             room.doctorTarget = targetId;
           }
           room.nightActed['doctor'] = true;
+
+        } else if (me.role === 'detective') {
+          // Passive — auto confirm, no target needed
+          room.nightActed['detective'] = true;
         }
 
         send(ws, { type: 'night_acted' });
 
-        // Переходимо до наступної ролі
         const prevTurn = room.nightTurn;
         const nextTurn = findNextNightRole(room, prevTurn);
         if (nextTurn) {
           room.nightTurn = nextTurn;
-          // Невелика пауза перед переходом (час для кінематика "засинає")
           delay(room, () => {
             broadcast(room, { type: 'night_turn', from: prevTurn, to: nextTurn });
             broadcastState(room);
           }, 500);
         } else {
-          // Всі відіграли — завершуємо ніч
           delay(room, () => endNight(room), 1000);
         }
         break;
@@ -596,17 +598,12 @@ wss.on('connection', (ws) => {
         if (room.phase !== 'day' && room.phase !== 'voting') return;
         const text = String(msg.text || '').trim().slice(0, 300);
         if (!text) return;
-
         const chatMsg = {
-          id: Date.now() + Math.random(),
-          playerId: myId,
-          name: me.name,
-          text,
+          id: Date.now() + Math.random(), playerId: myId, name: me.name, text,
           time: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
         };
         room.messages.push(chatMsg);
         if (room.messages.length > 200) room.messages = room.messages.slice(-200);
-
         broadcast(room, { type: 'chat', message: chatMsg });
         break;
       }
@@ -614,17 +611,59 @@ wss.on('connection', (ws) => {
       // ── VOTE ────────────────────────────────
       case 'vote': {
         if (!room || !me?.alive || room.phase !== 'voting') return;
-        room.votes[myId] = msg.targetId || null; // null = skip
+        room.votes[myId] = msg.targetId || null;
         broadcast(room, { type: 'vote_update', votes: room.votes });
         broadcastState(room);
-
-        // Check if all alive voted
         const aliveIds = getAlive(room).map(p => p.id);
-        const allVoted = aliveIds.every(id => room.votes[id] !== undefined);
-        if (allVoted) {
+        if (aliveIds.every(id => room.votes[id] !== undefined)) {
           clearTimers(room);
           delay(room, () => endVoting(room), 500);
         }
+        break;
+      }
+
+      // ── SUSPECT TOKEN ────────────────────────
+      case 'suspect': {
+        if (!room || !me?.alive) return;
+        if (room.phase !== 'day' && room.phase !== 'voting') return;
+        const targetId = msg.targetId;
+        if (msg.active) {
+          room.suspects[myId] = targetId;
+        } else {
+          if (room.suspects[myId] === targetId) delete room.suspects[myId];
+        }
+        // Recompute and broadcast
+        const suspectedIds = Object.values(room.suspects).filter(Boolean);
+        broadcast(room, { type: 'suspect_update', suspects: suspectedIds });
+        break;
+      }
+
+      // ── REACTION (dead players) ──────────────
+      case 'reaction': {
+        if (!room) return;
+        const alive = room.players.find(p => p.id === myId)?.alive;
+        if (alive) return; // only dead players
+        if (room.phase !== 'day' && room.phase !== 'voting') return;
+        const emoji = String(msg.emoji || '').slice(0, 8);
+        if (!emoji) return;
+        broadcast(room, { type: 'reaction', playerId: myId, name: me.name, emoji });
+        break;
+      }
+
+      // ── UPDATE SETTINGS (host only) ──────────
+      case 'update_settings': {
+        if (!room || !me?.isHost || room.phase !== 'lobby') return;
+        const s = msg.settings || {};
+        if (typeof s.fastMode === 'boolean') room.settings.fastMode = s.fastMode;
+        if (s.roles && typeof s.roles === 'object') {
+          for (const key of ['prostitute', 'detective', 'sheriff', 'doctor']) {
+            if (typeof s.roles[key] === 'boolean') room.settings.roles[key] = s.roles[key];
+          }
+        }
+        if (typeof s.dayDuration === 'number') {
+          room.settings.dayDuration = Math.max(30, Math.min(300, s.dayDuration));
+        }
+        broadcastState(room);
         break;
       }
 
@@ -657,39 +696,14 @@ wss.on('connection', (ws) => {
       case 'restart_game': {
         if (!room || !me?.isHost) return;
         if (room.phase !== 'finished' && room.phase !== 'game_over') return;
-        // Cancel delete timer
-        if (room._deleteTimer) { clearTimeout(room._deleteTimer); room._deleteTimer = null; }
-        // Reset room to lobby
-        clearTimers(room);
-        room.phase = 'lobby';
-        room.night = 0;
-        room.messages = [];
-        room.nightLog = [];
-        room.votes = {};
-        room.mafiaVotes = {};
-        room.nightActed = {};
-        room.mafiaTarget = null;
-        room.doctorTarget = null;
-        room.sheriffTarget = null;
-        room.winner = null;
-        room.phaseTime = 0;
-        // Reset player roles/alive
-        room.players.forEach(p => { p.role = null; p.alive = true; });
-        broadcast(room, { type: 'room_restarted' });
-        broadcastState(room);
-        break;
-      }
-
-      // ── RESTART GAME ────────────────────────
-      case 'restart_game': {
-        if (!room || !me?.isHost) return;
         if (room._deleteTimer) { clearTimeout(room._deleteTimer); room._deleteTimer = null; }
         clearTimers(room);
         room.phase = 'lobby'; room.night = 0;
         room.messages = []; room.nightLog = []; room.votes = {};
-        room.mafiaVotes = {}; room.nightActed = {};
+        room.mafiaVotes = {}; room.nightActed = {}; room.suspects = {};
         room.mafiaTarget = null; room.doctorTarget = null;
-        room.sheriffTarget = null; room.winner = null; room.phaseTime = 0;
+        room.sheriffTarget = null; room.prostituteTarget = null;
+        room.winner = null; room.phaseTime = 0; room.nightTurn = null;
         room.players.forEach(p => { p.role = null; p.alive = true; });
         broadcast(room, { type: 'room_restarted' });
         broadcastState(room);
@@ -709,13 +723,10 @@ wss.on('connection', (ws) => {
         break;
       }
 
-      // ── PING ────────────────────────────────
       case 'ping': send(ws, { type: 'pong' }); break;
     }
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🎭 Mafia server running → http://localhost:${PORT}`);
-});
+server.listen(PORT, () => console.log(`🎭 Mafia server running → http://localhost:${PORT}`));
