@@ -936,6 +936,8 @@ function playCinematic(slides, onDone){
   // Cancel any in-progress hideCinematic fade so opacity doesn't carry over
   _hideTimers.forEach(t=>clearTimeout(t));_hideTimers=[];
   const ov=document.getElementById('cinema');
+  const prog=document.getElementById('cinProg');
+  const content=document.getElementById('cinContent');
   ov.style.transition='none';
   ov.style.opacity='1';
   ov.classList.add('show');
@@ -944,9 +946,6 @@ function playCinematic(slides, onDone){
   if(S.settings.fastMode){
     slides=slides.map(s=>({...s,dur:Math.round((s.dur||2000)*0.5)}));
   }
-  const ov=document.getElementById('cinema');
-  const prog=document.getElementById('cinProg');
-  const content=document.getElementById('cinContent');
 
   prog.innerHTML=slides.map((_,i)=>`<div class="cin-dot" id="cd${i}"></div>`).join('');
   startCinStars();
@@ -2103,4 +2102,3 @@ connectWS();
 </script>
 </body>
 </html>
-    
