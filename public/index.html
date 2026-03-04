@@ -897,6 +897,7 @@ function onMsg(m){
 // ══════════════════════════════════════════════
 let cinTimer=null;
 let cinStarsRAF=null;
+let _cinActive=false; // true while cinematic overlay is playing
 
 const CIN_BG={
   sunset: 'radial-gradient(ellipse at 50% 100%, #4a1800 0%, #220c02 40%, #0a0408 100%)',
@@ -926,6 +927,7 @@ let cinOnDone=null;
 
 function playCinematic(slides, onDone){
   if(cinTimer){clearTimeout(cinTimer);cinTimer=null;}
+  _cinActive=true;
   // Fast mode: halve all slide durations
   if(S.settings.fastMode){
     slides=slides.map(s=>({...s,dur:Math.round((s.dur||2000)*0.5)}));
@@ -946,13 +948,13 @@ function playCinematic(slides, onDone){
   function showSlide(){
     if(idx>=slides.length){
       const elapsed=Date.now()-cinStarted;
-      const minShow=Math.min(2200, cinTotal);
+      const minShow=Math.min(3000, cinTotal);
       const wait=Math.max(0, minShow-elapsed);
       // Smooth fade-out of current content before hiding
       content.style.cssText=`opacity:0;transform:translateY(-10px) scale(.96);filter:blur(4px);transition:opacity ${FADE_OUT}ms ease,transform ${FADE_OUT}ms var(--smooth),filter ${FADE_OUT}ms ease`;
       setTimeout(()=>{
-        hideCinematic();
         if(onDone)onDone();
+        hideCinematic();
         if(cinOnDone){const cb=cinOnDone;cinOnDone=null;setTimeout(cb,700);}
       }, wait);
       return;
@@ -1020,6 +1022,7 @@ function hideCinematic(){
     ov.className='cinema';
     ov.style.cssText='';
     content.style.cssText='';
+    _cinActive=false;
     if(cinStarsRAF){cancelAnimationFrame(cinStarsRAF);cinStarsRAF=null;}
   },820);
 }
@@ -1117,25 +1120,25 @@ function getIntroSlides(role){
   };
   const rev=REVEAL[role]||REVEAL.civilian;
   return[
-    {bg:CIN_BG.intro,        icon:'🎭', title:'Ролі роздано!',           sub:'Прочитай свою роль уважно',                      dur:2400},
-    {bg:rev.bg,              icon:rev.icon, title:rev.title,             sub:rev.sub,                                          dur:4000},
-    {bg:CIN_BG.transition,   icon:'🌆', title:'Перша ніч вже близько...', sub:'Місто готується до темряви',                    dur:2400},
+    {bg:CIN_BG.intro,        icon:'🎭', title:'Ролі роздано!',           sub:'Прочитай свою роль уважно',                      dur:3200},
+    {bg:rev.bg,              icon:rev.icon, title:rev.title,             sub:rev.sub,                                          dur:6000},
+    {bg:CIN_BG.transition,   icon:'🌆', title:'Перша ніч вже близько...', sub:'Місто готується до темряви',                    dur:3000},
   ];
 }
 function getNightIntroSlides(night){
   return[
-    {bg:CIN_BG.sunset,  icon:'🌆', title:'Сонце заходить за обрій...',  sub:`Ніч ${night} опускається на місто`,             dur:2600},
-    {bg:CIN_BG.night,   icon:'🌙', title:'Настає темна ніч...',         sub:'Зірки запалюються одна за одною',                dur:2400},
-    {bg:CIN_BG.sleep,   icon:'🏘️', title:'Місто поступово засинає...',  sub:'Мирні жителі не підозрюють про небезпеку',       dur:2400},
+    {bg:CIN_BG.sunset,  icon:'🌆', title:'Сонце заходить за обрій...',  sub:`Ніч ${night} опускається на місто`,             dur:3400},
+    {bg:CIN_BG.night,   icon:'🌙', title:'Настає темна ніч...',         sub:'Зірки запалюються одна за одною',                dur:3200},
+    {bg:CIN_BG.sleep,   icon:'🏘️', title:'Місто поступово засинає...',  sub:'Мирні жителі не підозрюють про небезпеку',       dur:3000},
   ];
 }
 function getRoleWakeSlides(role){
   const WAKE={
-    mafia:      {bg:CIN_BG.mafia,      icon:'🔫', title:'Мафія прокидається...',    sub:'Оберіть жертву цієї ночі',         dur:2800},
-    sheriff:    {bg:CIN_BG.sheriff,    icon:'⭐', title:'Прокидається шериф...',    sub:'Час розкрити правду міста',         dur:2800},
-    doctor:     {bg:CIN_BG.doctor,     icon:'💊', title:'Прокидається лікар...',    sub:'Хтось потребує захисту сьогодні',  dur:2800},
-    prostitute: {bg:CIN_BG.prostitute, icon:'💃', title:'Прокидається повія...',    sub:'Кого відвідати цієї ночі?',         dur:2800},
-    detective:  {bg:CIN_BG.detective,  icon:'🕵️', title:'Прокидається детектив...', sub:'Спостерігай за подіями цієї ночі', dur:2800},
+    mafia:      {bg:CIN_BG.mafia,      icon:'🔫', title:'Мафія прокидається...',    sub:'Оберіть жертву цієї ночі',         dur:3800},
+    sheriff:    {bg:CIN_BG.sheriff,    icon:'⭐', title:'Прокидається шериф...',    sub:'Час розкрити правду міста',         dur:3800},
+    doctor:     {bg:CIN_BG.doctor,     icon:'💊', title:'Прокидається лікар...',    sub:'Хтось потребує захисту сьогодні',  dur:3800},
+    prostitute: {bg:CIN_BG.prostitute, icon:'💃', title:'Прокидається повія...',    sub:'Кого відвідати цієї ночі?',         dur:3800},
+    detective:  {bg:CIN_BG.detective,  icon:'🕵️', title:'Прокидається детектив...', sub:'Спостерігай за подіями цієї ночі', dur:3800},
   };
   return[WAKE[role]||{bg:CIN_BG.sleep,icon:'💤',title:'Місто спить...',sub:'',dur:2000}];
 }
@@ -1147,7 +1150,7 @@ function getRoleSleepSlides(role){
     prostitute:'Повія повертається додому...',
     detective:'Детектив аналізує побачене...',
   };
-  return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:2400}];
+  return[{bg:CIN_BG.sleep, icon:'💤', title:txt[role]||'Засинаєш...', sub:'Справи зроблено на цю ніч', dur:3000}];
 }
 function getTurnTransitionSlides(from, to){
   const sleepTxt={
@@ -1168,9 +1171,9 @@ function getTurnTransitionSlides(from, to){
   const wakeBg={mafia:CIN_BG.mafia,sheriff:CIN_BG.sheriff,doctor:CIN_BG.doctor,prostitute:CIN_BG.prostitute,detective:CIN_BG.detective};
   const wakeIco={mafia:'🔫',sheriff:'⭐',doctor:'💊',prostitute:'💃',detective:'🕵️'};
   const slides=[];
-  if(from) slides.push({bg:CIN_BG.sleep, icon:'💤', title:sleepTxt[from]||'Засинає...', sub:'', dur:2200});
+  if(from) slides.push({bg:CIN_BG.sleep, icon:'💤', title:sleepTxt[from]||'Засинає...', sub:'', dur:2800});
   if(to)   slides.push({bg:wakeBg[to]||CIN_BG.sleep, icon:wakeIco[to]||'💤',
-                        title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:2800});
+                        title:wakeTxt[to]||'Прокидається...', sub:wakeSub[to]||'', dur:3800});
   return slides.length ? slides : [{bg:CIN_BG.sleep,icon:'💤',title:'...',sub:'',dur:1200}];
 }
 function getNightSlides(role, night){
@@ -1179,20 +1182,20 @@ function getNightSlides(role, night){
 }
 function getDawnSlides(log){
   const slides=[
-    {bg:CIN_BG.dawn,   icon:'✨', title:'Ніч добігає кінця...', sub:'Місто чекає на світанок', dur:2600},
-    {bg:CIN_BG.dawn,   icon:'🌅', title:'Сонце повільно сходить...', sub:'Новий день приносить відповіді', dur:2600},
+    {bg:CIN_BG.dawn,   icon:'✨', title:'Ніч добігає кінця...', sub:'Місто чекає на світанок', dur:3400},
+    {bg:CIN_BG.dawn,   icon:'🌅', title:'Сонце повільно сходить...', sub:'Новий день приносить відповіді', dur:3400},
   ];
   (log||[]).forEach(ev=>{
     slides.push({
       bg: ev.emoji==='💀'?CIN_BG.death:(ev.emoji==='🏥'?CIN_BG.doctor:CIN_BG.dawn),
-      icon:ev.emoji, title:ev.text, sub:'', dur:3600,
+      icon:ev.emoji, title:ev.text, sub:'', dur:5000,
     });
   });
-  slides.push({bg:CIN_BG.day, icon:'☀️', title:'Місто прокидається...', sub:'Час говорити та шукати правду', dur:2400});
+  slides.push({bg:CIN_BG.day, icon:'☀️', title:'Місто прокидається...', sub:'Час говорити та шукати правду', dur:3200});
   return slides;
 }
 function getDaySlides(){
-  return[{bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:2600}];
+  return[{bg:CIN_BG.day, icon:'🗣️', title:'Починається обговорення...', sub:'У вас 1 хвилина до голосування', dur:3400}];
 }
 
 // ── PHASES ────────────────────────────────────
@@ -1269,6 +1272,9 @@ function onNightTurnReady(from, to){
 function fromSnap(){
   const snap=S.snap;if(!snap)return;
   if(snap.phase==='lobby'){renderLobby(snap);return;}
+  // Don't let snapshot updates re-render phase UI while cinematic is playing
+  // (causes chat/day UI to flash through the cinematic overlay)
+  if(_cinActive)return;
   if(snap.phase==='voting'&&Object.keys(snap.votes).length>0)renderVotes(snap.votes);
 }
 
@@ -1440,7 +1446,7 @@ function confNight(){
 }
 function skipNight(){
   wsSend({type:'night_action',targetId:null});vib([20,10,20]);
-  playCinematic([{bg:CIN_BG.sleep,icon:'💤',title:'Ти пропускаєш...',sub:'Місто чекає на ранок',dur:1500}],()=>renderNightSleeping());
+  playCinematic([{bg:CIN_BG.sleep,icon:'💤',title:'Ти пропускаєш...',sub:'Місто чекає на ранок',dur:2200}],()=>renderNightSleeping());
 }
 
 // ── DAWN ──────────────────────────────────────
@@ -1574,7 +1580,7 @@ function onGameOver(m){
   const icon=m.winner==='civilians'?'🕊️':'🔫';
   const title=m.winner==='civilians'?'Місто врятоване!':'Мафія захопила місто!';
   const sub=win?'🏆 Ти переміг!':'😔 Ти програв...';
-  playCinematic([{bg:CIN_BG.victory,icon,title,sub,dur:3400}],()=>showGameOver(m,win));
+  playCinematic([{bg:CIN_BG.victory,icon,title,sub,dur:5000}],()=>showGameOver(m,win));
   setTimeout(()=>win?SND.win():SND.lose(),400);
   vib(win?[200,100,200,100,400]:[400,100,100]);
 }
@@ -1959,10 +1965,46 @@ function spawnFloatingEmoji(emoji,x,y){
 function animateDeath(playerId){
   SND.death();vib([100,50,200]);
   const el=document.querySelector(`#dpc_${playerId}`);if(!el)return;
+  const dav=el.querySelector('.dav');if(!dav)return;
+  const rect=dav.getBoundingClientRect();
+
+  // ── Floating skull at avatar position ──
+  spawnFloatingEmoji('💀',rect.left+rect.width/2,rect.top);
+
+  // ── Freeze-frame clone: fixed overlay, survives DOM re-renders ──
+  const bgStyle=window.getComputedStyle(dav).background||'#333';
+  const clone=document.createElement('div');
+  clone.style.cssText=[
+    `position:fixed`,
+    `left:${rect.left}px`,`top:${rect.top}px`,
+    `width:${rect.width}px`,`height:${rect.height}px`,
+    `border-radius:50%`,`z-index:9990`,`pointer-events:none`,
+    `overflow:hidden`,`background:${bgStyle}`,
+    `display:flex`,`align-items:center`,`justify-content:center`,
+    `font-size:${Math.round(rect.height*.37)}px`,
+    `font-weight:700`,`color:#fff`,
+  ].join(';');
+
+  // Copy inner content (initials text or img)
+  clone.innerHTML=dav.innerHTML;
+  // Fix any relative img paths that may have been cloned
+  clone.querySelectorAll('img').forEach(img=>{img.style.cssText='width:100%;height:100%;object-fit:cover';});
+
+  document.body.appendChild(clone);
+
+  // 3-stage animation: flash white → desaturate → shrink & fade
+  const kf=[
+    {transform:'scale(1)',   filter:'saturate(1) brightness(1)', opacity:1},
+    {transform:'scale(1.35)',filter:'saturate(0) brightness(2.5)',opacity:.9,offset:.2},
+    {transform:'scale(.85) rotate(-10deg)',filter:'saturate(0) brightness(.6)',opacity:.5,offset:.65},
+    {transform:'scale(0) rotate(-25deg) translateY(12px)',filter:'saturate(0) brightness(0)',opacity:0},
+  ];
+  const anim=clone.animate(kf,{duration:850,easing:'cubic-bezier(0.34,1.56,0.64,1)',fill:'forwards'});
+  anim.onfinish=()=>clone.remove();
+
+  // Red glow pulse on the original tile (quick, doesn't matter if DOM re-renders)
   el.classList.add('just-died');
-  const dav=el.querySelector('.dav');
-  if(dav){const rect=dav.getBoundingClientRect();spawnFloatingEmoji('💀',rect.left+rect.width/2,rect.top);}
-  setTimeout(()=>el.classList.remove('just-died'),1200);
+  setTimeout(()=>{if(el.isConnected)el.classList.remove('just-died');},700);
 }
 let _prevAlive=new Set();
 function checkDeaths(snap){
